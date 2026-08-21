@@ -338,4 +338,160 @@ return [
         ],
     ],
 
+    '10_teachers' => [
+        'form_label'     => 'ตารางที่ 10 ข้อมูลครู',
+        'source_file'    => '10_ข้อมูลครู.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '10.1ทุกสังกัด',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้บริหาร/ครู/บุคลากร แยกตามตำแหน่งและเพศ
+                'value_label'     => 'ตำแหน่ง',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '10.2ทุกสังกัด',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามระดับชั้นที่สอนและเพศ
+                'value_label'     => 'ระดับชั้น',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '10.3ทุกสังกัด(ยกเว้นสาธิต&อุดม)',
+                // แถว 4 ซ้ำคำว่า "วุฒิการศึกษาที่สำเร็จสูงสุด" ทุกคอลัมน์ ไม่ช่วยแยกแยะ
+                'skip_rows'       => [1, 2, 4],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามวิทยฐานะ วุฒิการศึกษา และเพศ
+                'value_label'     => 'วิทยฐานะ/วุฒิ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '10.3กรอกเฉพาะสาธิต&อุดมฯ',
+                'skip_rows'       => [1, 2, 4],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามตำแหน่งวิชาการ วุฒิการศึกษา และเพศ
+                'value_label'     => 'ตำแหน่ง/วุฒิ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '10.4ทุกสังกัด',
+                // แถว 3 ซ้ำคำว่า "จำนวนผู้สอนแยกตามวิชาเอก" ทุกคอลัมน์ ไม่ช่วยแยกแยะ
+                'skip_rows'       => [1, 2, 3],
+                'header_rows'     => 4,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามวิชาเอก (ไม่มีแยกเพศ)
+                'value_label'     => 'วิชาเอก',
+            ],
+        ],
+    ],
+
+    '11_nfe' => [
+        'form_label'     => 'ตารางที่ 11 ข้อมูลการศึกษา กศน.',
+        'source_file'    => '11_ข้อมูลการศึกษา_กศน.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '11.1',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้เรียนปกติที่ลงทะเบียน แยกตามกิจกรรมการศึกษาและเพศ
+                'value_label'     => 'กิจกรรมการศึกษา',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '11.2',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้เรียนพิการที่ลงทะเบียน แยกตามกิจกรรมการศึกษาและเพศ
+                'value_label'     => 'กิจกรรมการศึกษา',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '11.3',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้เรียนพิการ แยกตามประเภทความพิการและเพศ
+                'value_label'     => 'ประเภทความพิการ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '11.4',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้เรียนปกติที่สำเร็จการศึกษา แยกตามกิจกรรมการศึกษาและเพศ
+                'value_label'     => 'กิจกรรมการศึกษา',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '11.5',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้เรียนพิการที่สำเร็จการศึกษา แยกตามกิจกรรมการศึกษาและเพศ
+                'value_label'     => 'กิจกรรมการศึกษา',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
+    // หมายเหตุ: ยังไม่รองรับไฟล์ 13_จำนวนนักเรียนแยกรายชั้น.xlsx — ชีทนั้นเป็นตารางไขว้ 2 มิติ
+    // (แถว = ช่วงอายุของหน่วยงานนั้น, คอลัมน์ = ชั้น+เพศ) กรอกหลายแถวต่อหน่วยงานเดียว
+    // ไม่ใช่ 1 แถวต่อสถานศึกษาแบบชีทอื่น ต้องออกแบบแยกต่างหากเหมือน "9.สรุป"
+
+    '14a_childcare_centers' => [
+        'form_label'     => 'ตารางที่ 14ก ข้อมูลศูนย์พัฒนาเด็กเล็ก',
+        'source_file'    => '14_ก-ข้อมูลศูนย์พัฒนาเด็กเล็ก.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก',
+                'skip_rows'       => [1],
+                'header_rows'     => 4,
+                'identity_cols'   => 6,
+                // ลำดับคอลัมน์ระบุตัวตนของฟอร์มนี้ไม่เหมือนมาตรฐาน (ตำบลมาก่อนอำเภอ และมีคอลัมน์
+                // "เป็นศูนย์ถ่ายโอน/ตั้งเอง" แทรก) — center_type ไม่ใช่ field มาตรฐาน จะถูกเก็บลง
+                // extra_identity (JSON) แทนที่จะมีคอลัมน์ของตัวเองในตาราง
+                'identity_fields' => ['seq_no', 'tambon', 'amphoe', 'agency_name', 'center_type', 'school_name'],
+                'value_type'      => 'numeric', // จำนวนเด็กเล็กแยกอายุ/เพศ + จำนวนครูแยกวุฒิ/เพศ
+                'value_label'     => 'รายการ',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
+    '14b_ecd_centers' => [
+        'form_label'     => 'ตารางที่ 14ข ข้อมูลสถานพัฒนาเด็กปฐมวัย',
+        'source_file'    => '14_ข-ข้อมูลสถานพัฒนาเด็กปฐมวัย.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '14.สถานพัฒนาเด็กปฐมวัย',
+                'skip_rows'       => [1],
+                'header_rows'     => 4,
+                'identity_cols'   => 6,
+                'identity_fields' => ['seq_no', 'tambon', 'amphoe', 'agency_name', 'center_type', 'school_name'],
+                'value_type'      => 'numeric',
+                'value_label'     => 'รายการ',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
 ];

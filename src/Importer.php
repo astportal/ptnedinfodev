@@ -83,29 +83,38 @@ class Importer
         // Build column_path for every value column beyond identity_cols, by joining the text of
         // every non-skipped header row (blank/duplicate-adjacent parts skipped). Some templates
         // group header cells visually (leaving the cell blank) without an actual Excel merge, so
-        // a blank header cell also falls back to the last non-blank cell seen so far in that same
-        // row — the same effect a real merge would have had.
+        // a blank header cell falls back to the same row's value in the PREVIOUS column — the same
+        // effect a real merge would have had. That inheritance only holds while every shallower row
+        // still matches the previous column too ("still inside the same group"); the moment a
+        // shallower row diverges, inheritance stops for the rest of this column, so a blank cell
+        // right after an unrelated single-column group (e.g. a "รวม" total column) doesn't
+        // accidentally inherit that group's label instead of being left blank.
         $columnPaths = [];
-        $rowCarry = [];
+        $prevRowTexts = [];
         for ($c = $identityCols + 1; $c <= $maxCol; $c++) {
             $parts = [];
             $prev = null;
+            $curRowTexts = [];
+            $scopeBroken = false;
             for ($r = 1; $r <= $headerRows; $r++) {
                 if (in_array($r, $skipRows, true)) {
                     continue;
                 }
                 $text = trim((string)($grid[$r][$c] ?? ''));
-                if ($text === '') {
-                    $text = $rowCarry[$r] ?? '';
-                } else {
-                    $rowCarry[$r] = $text;
+                if ($text === '' && !$scopeBroken) {
+                    $text = $prevRowTexts[$r] ?? '';
                 }
+                if (($prevRowTexts[$r] ?? null) !== $text) {
+                    $scopeBroken = true;
+                }
+                $curRowTexts[$r] = $text;
                 if ($text === '' || $text === $prev) {
                     continue;
                 }
                 $parts[] = $text;
                 $prev = $text;
             }
+            $prevRowTexts = $curRowTexts;
             $columnPaths[$c] = $parts ? implode(' / ', $parts) : "คอลัมน์ที่ " . $c;
         }
 
