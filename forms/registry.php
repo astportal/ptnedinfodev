@@ -11,6 +11,11 @@
  *   identity_cols   : how many leading columns are "identity" columns (ลำดับที่ / รหัสสถานศึกษา / ชื่อหน่วยงาน ฯลฯ)
  *                     — these become fixed fields on the submission row instead of generic value columns.
  *   identity_fields : field name for each identity column, in order (must match identity_cols count)
+ *   value_type      : 'numeric' (default) or 'text'. When 'numeric', every value column is checked:
+ *                      "-" is treated as 0, "/" is treated as 1, plain numbers pass through as-is,
+ *                      and anything else is flagged as needs_review instead of being guessed (see
+ *                      Importer::classifyValue). Use 'text' for sheets whose value columns are genuinely
+ *                      free text / categorical (names, sizes, types) — no numeric inference is applied.
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every header row for that column, joined with " / ". This is what lets the
@@ -31,6 +36,7 @@ return [
                 'header_rows'     => 4,
                 'identity_cols'   => 3,
                 'identity_fields' => ['agency_name', 'admin_name', 'phone'],
+                'value_type'      => 'numeric', // จำนวนบุคลากรแยกชาย/หญิง
             ],
         ],
     ],
@@ -45,6 +51,7 @@ return [
                 'header_rows'     => 3,
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
+                'value_type'      => 'text', // ชื่อผู้บริหาร/โทรศัพท์/ขนาด/ประเภท เป็นข้อความ ไม่ใช่ตัวเลข
             ],
             [
                 'sheet_name'      => 'ระดับที่เปิดสอน',
@@ -52,6 +59,7 @@ return [
                 'header_rows'     => 4,
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
+                'value_type'      => 'numeric', // ติ๊ก "/" = เปิดสอน, "-" = ไม่เปิดสอน ในแต่ละระดับชั้น
             ],
         ],
     ],
@@ -66,6 +74,7 @@ return [
                 'header_rows'     => 4,
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
+                'value_type'      => 'numeric', // จำนวนห้องเรียนแยกตามระดับชั้น
             ],
         ],
     ],

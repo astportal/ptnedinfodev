@@ -33,16 +33,18 @@ class Reporting
         $ids = array_column($submissions, 'id');
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $valStmt = $this->db->prepare(
-            "SELECT submission_id, col_index, column_path, value FROM submission_values
+            "SELECT submission_id, col_index, column_path, value, needs_review FROM submission_values
              WHERE submission_id IN ($placeholders)"
         );
         $valStmt->execute($ids);
 
         $columns = []; // col_index => column_path
         $valuesBySubmission = []; // submission_id => [column_path => value]
+        $reviewFlags = [];        // submission_id => [column_path => bool]
         while ($row = $valStmt->fetch()) {
             $columns[(int)$row['col_index']] = $row['column_path'];
             $valuesBySubmission[$row['submission_id']][$row['column_path']] = $row['value'];
+            $reviewFlags[$row['submission_id']][$row['column_path']] = (bool)$row['needs_review'];
         }
         ksort($columns);
 
@@ -56,9 +58,13 @@ class Reporting
                 'school_name' => $s['school_name'],
                 'amphoe'      => $s['amphoe'],
                 'tambon'      => $s['tambon'],
+                '_needs_review' => [],
             ];
             foreach ($columns as $path) {
                 $row[$path] = $valuesBySubmission[$s['id']][$path] ?? '';
+                if ($reviewFlags[$s['id']][$path] ?? false) {
+                    $row['_needs_review'][$path] = true;
+                }
             }
             $rows[] = $row;
         }

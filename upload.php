@@ -60,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
   <nav>
     <a href="index.php">แดชบอร์ด</a>
+    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
@@ -115,6 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </table>
       <p style="margin-top:16px;">
         <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($formDef['sheets'][0]['sheet_name']) ?>">ดูข้อมูลที่รวบรวม</a>
+        <?php if (array_sum(array_column($results['uploads'], 'needs_review'))): ?>
+          <a class="btn" style="background:#dc2626;" href="review.php">ไปตรวจสอบค่าที่ไม่แน่ใจ</a>
+        <?php endif; ?>
       </p>
     </div>
   <?php endif; ?>

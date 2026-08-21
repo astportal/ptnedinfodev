@@ -35,12 +35,19 @@ class Importer
             }
 
             try {
-                $rowCount = $this->importSheet($reader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
+                $sheetResult = $this->importSheet($reader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
+                $rowCount = $sheetResult['rows'];
+                $needsReview = $sheetResult['needs_review'];
+                $message = "นำเข้าสำเร็จ {$rowCount} แถว";
+                if ($needsReview > 0) {
+                    $message .= " — พบ {$needsReview} ค่าที่ไม่แน่ใจว่าเป็นตัวเลขหรือไม่ ต้องตรวจสอบ";
+                }
                 $results[] = [
-                    'sheet_name' => $sheetName,
-                    'status'     => 'parsed',
-                    'message'    => "นำเข้าสำเร็จ {$rowCount} แถว",
-                    'row_count'  => $rowCount,
+                    'sheet_name'   => $sheetName,
+                    'status'       => 'parsed',
+                    'message'      => $message,
+                    'row_count'    => $rowCount,
+                    'needs_review' => $needsReview,
                 ];
                 $totalRows += $rowCount;
             } catch (Throwable $e) {
@@ -56,13 +63,17 @@ class Importer
         return ['uploads' => $results, 'total_rows' => $totalRows];
     }
 
-    private function importSheet(XlsxReader $reader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): int
+    /**
+     * @return array{rows: int, needs_review: int}
+     */
+    private function importSheet(XlsxReader $reader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
     {
         $sheetName    = $sheetDef['sheet_name'];
         $headerRows   = $sheetDef['header_rows'];
         $titleRow     = $sheetDef['title_row'] ?? 0;
         $identityCols = $sheetDef['identity_cols'];
         $identityFields = $sheetDef['identity_fields'];
+        $valueType    = $sheetDef['value_type'] ?? 'text';
 
         $data = $reader->readGrid($sheetName);
         $grid = $data['grid'];
@@ -105,6 +116,7 @@ class Importer
         $uploadId = (int)$this->db->lastInsertId();
 
         $rowsImported = 0;
+        $needsReviewCount = 0;
         $this->db->beginTransaction();
         try {
             for ($r = $headerRows + 1; $r <= $maxRow; $r++) {
@@ -160,14 +172,24 @@ class Importer
                 $submissionId = (int)$this->db->lastInsertId();
 
                 $valStmt = $this->db->prepare(
-                    'INSERT INTO submission_values (submission_id, col_index, column_path, value) VALUES (:sid, :ci, :cp, :val)'
+                    'INSERT INTO submission_values (submission_id, col_index, column_path, value, needs_review)
+                     VALUES (:sid, :ci, :cp, :val, :nr)'
                 );
                 foreach ($columnPaths as $c => $path) {
-                    $val = trim((string)($rowData[$c] ?? ''));
-                    if ($val === '') {
+                    $raw = trim((string)($rowData[$c] ?? ''));
+                    if ($raw === '') {
                         continue;
                     }
-                    $valStmt->execute(['sid' => $submissionId, 'ci' => $c, 'cp' => $path, 'val' => $val]);
+                    if ($valueType === 'numeric') {
+                        [$val, $needsReview] = $this->classifyValue($raw);
+                    } else {
+                        $val = $raw;
+                        $needsReview = false;
+                    }
+                    if ($needsReview) {
+                        $needsReviewCount++;
+                    }
+                    $valStmt->execute(['sid' => $submissionId, 'ci' => $c, 'cp' => $path, 'val' => $val, 'nr' => $needsReview ? 1 : 0]);
                 }
 
                 $rowsImported++;
@@ -182,7 +204,32 @@ class Importer
             throw $e;
         }
 
-        return $rowsImported;
+        return ['rows' => $rowsImported, 'needs_review' => $needsReviewCount];
+    }
+
+    /**
+     * Interpret a raw cell value expected to be numeric:
+     *   "-"           -> 0 (แปลว่าไม่มี/ไม่มีข้อมูลในช่องนั้น)
+     *   "/"           -> 1 (แปลว่ามี/เปิดสอน — พบบ่อยในตารางแบบติ๊ก)
+     *   ตัวเลขล้วน     -> ใช้ค่านั้นตรง ๆ (ตัด , คั่นหลักพันออกก่อนเทียบ)
+     *   อย่างอื่น      -> เก็บค่าดิบไว้ตามที่กรอกมา และตั้งค่า needs_review = true ให้ผู้ดูแลตรวจสอบภายหลัง
+     *                     แทนที่จะเดาค่าเอง
+     *
+     * @return array{0: string, 1: bool} [ค่าที่ใช้บันทึก, ต้องตรวจสอบหรือไม่]
+     */
+    private function classifyValue(string $raw): array
+    {
+        if ($raw === '-') {
+            return ['0', false];
+        }
+        if ($raw === '/') {
+            return ['1', false];
+        }
+        $clean = str_replace([',', ' '], '', $raw);
+        if (is_numeric($clean)) {
+            return [$clean, false];
+        }
+        return [$raw, true];
     }
 
     private function deleteExistingSubmission(string $formKey, string $sheetName, ?string $schoolCode, ?string $agencyName): void

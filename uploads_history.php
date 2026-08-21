@@ -50,6 +50,7 @@ function form_label_for(array $forms, string $key): string
   <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
   <nav>
     <a href="index.php">แดชบอร์ด</a>
+    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>

@@ -7,6 +7,7 @@ $forms = form_registry();
 
 $countStmt = $db->prepare('SELECT COUNT(*) FROM submissions WHERE form_key = :fk AND sheet_name = :sn');
 $lastStmt  = $db->prepare('SELECT uploaded_at FROM uploads WHERE form_key = :fk AND sheet_name = :sn ORDER BY uploaded_at DESC LIMIT 1');
+$needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHERE needs_review = 1')->fetchColumn();
 ?>
 <!doctype html>
 <html lang="th">
@@ -19,6 +20,7 @@ $lastStmt  = $db->prepare('SELECT uploaded_at FROM uploads WHERE form_key = :fk 
 <div class="topbar">
   <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
   <nav>
+    <a href="review.php">รายการที่ต้องตรวจสอบ<?= $needsReviewTotal > 0 ? " ({$needsReviewTotal})" : '' ?></a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
@@ -27,6 +29,13 @@ $lastStmt  = $db->prepare('SELECT uploaded_at FROM uploads WHERE form_key = :fk 
 <div class="container">
   <h1>รายการแบบฟอร์ม</h1>
   <p class="muted">เลือกฟอร์มเพื่ออัปโหลดไฟล์ที่ได้รับจากหน่วยงาน หรือดู/ส่งออกข้อมูลที่รวบรวมแล้ว</p>
+
+  <?php if ($needsReviewTotal > 0): ?>
+    <div class="alert alert-err">
+      พบ <?= $needsReviewTotal ?> ค่าที่ระบบไม่แน่ใจว่าเป็นตัวเลขหรือไม่ ต้องการให้ตรวจสอบ —
+      <a href="review.php">ไปตรวจสอบตอนนี้</a>
+    </div>
+  <?php endif; ?>
 
   <div class="grid-cards">
     <?php foreach ($forms as $formKey => $formDef): ?>

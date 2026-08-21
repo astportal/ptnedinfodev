@@ -50,6 +50,7 @@ $identityLabels = [
   <nav>
     <a href="index.php">แดชบอร์ด</a>
     <a href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
+    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>
@@ -90,7 +91,8 @@ $identityLabels = [
                   <td><?= h((string)($row[$key] ?? '')) ?></td>
                 <?php endforeach; ?>
                 <?php foreach ($pivot['columns'] as $path): ?>
-                  <td><?= h((string)($row[$path] ?? '')) ?></td>
+                  <?php $flagged = !empty($row['_needs_review'][$path]); ?>
+                  <td<?= $flagged ? ' style="background:#fee2e2;" title="ต้องตรวจสอบ — ไม่แน่ใจว่าเป็นตัวเลข"' : '' ?>><?= h((string)($row[$path] ?? '')) ?></td>
                 <?php endforeach; ?>
                 <td>
                   <form method="post" onsubmit="return confirm('ยืนยันลบรายการนี้? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0;">

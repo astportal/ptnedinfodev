@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS submission_values (
     col_index     INT UNSIGNED NOT NULL,   -- ลำดับคอลัมน์ในชีทต้นฉบับ (สำหรับเรียงคอลัมน์ตอน export)
     column_path   VARCHAR(500) NOT NULL,
     value         TEXT NULL,
+    needs_review  TINYINT(1) NOT NULL DEFAULT 0,  -- ค่าที่ไม่ใช่ตัวเลข/-/ ที่ระบบอนุมานไม่ได้ ต้องให้ผู้ดูแลตรวจสอบ
     KEY idx_submission (submission_id),
+    KEY idx_needs_review (needs_review),
     CONSTRAINT fk_values_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
