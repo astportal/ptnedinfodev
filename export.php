@@ -40,4 +40,15 @@ foreach ($pivot['rows'] as $row) {
     fputcsv($out, $line);
 }
 
+if ($pivot['rows']) {
+    $totalLine = ['รวมทั้งหมด'];
+    foreach (array_slice(array_keys($identityLabels), 1) as $key) {
+        $totalLine[] = '';
+    }
+    foreach ($pivot['columns'] as $path) {
+        $totalLine[] = $pivot['totals'][$path] ?? '';
+    }
+    fputcsv($out, $totalLine);
+}
+
 fclose($out);

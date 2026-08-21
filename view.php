@@ -104,6 +104,18 @@ $identityLabels = [
               </tr>
             <?php endforeach; ?>
           </tbody>
+          <tfoot>
+            <tr style="font-weight:700; background:#f3f4f6;">
+              <td>รวมทั้งหมด</td>
+              <?php for ($i = 1; $i < count($identityLabels); $i++): ?>
+                <td></td>
+              <?php endfor; ?>
+              <?php foreach ($pivot['columns'] as $path): ?>
+                <td><?= h((string)($pivot['totals'][$path] ?? '')) ?></td>
+              <?php endforeach; ?>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     <?php endif; ?>

@@ -11,9 +11,10 @@ class Reporting
     }
 
     /**
-     * @return array{columns: array<int,string>, rows: array<int, array<string,mixed>>}
+     * @return array{columns: array<int,string>, rows: array<int, array<string,mixed>>, totals: array<string,string>}
      *   columns: col_index => column_path, in original column order
      *   rows: each row has identity fields + one entry per column_path (keyed by column_path)
+     *   totals: column_path => sum of all numeric values in that column (blank if the column has no numeric values)
      */
     public function pivot(string $formKey, string $sheetName): array
     {
@@ -27,7 +28,7 @@ class Reporting
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
-            return ['columns' => [], 'rows' => []];
+            return ['columns' => [], 'rows' => [], 'totals' => []];
         }
 
         $ids = array_column($submissions, 'id');
@@ -69,6 +70,25 @@ class Reporting
             $rows[] = $row;
         }
 
-        return ['columns' => $columns, 'rows' => $rows];
+        // แถวรวม: บวกเฉพาะคอลัมน์ที่มีค่าเป็นตัวเลขอยู่จริง (คอลัมน์ข้อความ เช่น ชื่อผู้บริหาร/ขนาดสถานศึกษา จะเว้นว่างไว้)
+        $totals = [];
+        foreach ($columns as $path) {
+            $sum = 0.0;
+            $hasNumeric = false;
+            foreach ($rows as $row) {
+                $v = $row[$path] ?? '';
+                if ($v !== '' && is_numeric($v)) {
+                    $sum += (float)$v;
+                    $hasNumeric = true;
+                }
+            }
+            if (!$hasNumeric) {
+                $totals[$path] = '';
+                continue;
+            }
+            $totals[$path] = (fmod($sum, 1.0) === 0.0) ? (string)(int)$sum : (string)$sum;
+        }
+
+        return ['columns' => $columns, 'rows' => $rows, 'totals' => $totals];
     }
 }
