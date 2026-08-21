@@ -16,11 +16,9 @@
  *                      and anything else is flagged as needs_review instead of being guessed (see
  *                      Importer::classifyValue). Use 'text' for sheets whose value columns are genuinely
  *                      free text / categorical (names, sizes, types) — no numeric inference is applied.
- *   value_level_labels : optional. Column headers are stored as one joined path (e.g.
- *                      "ข้าราชการ / ชาย"); the "tidy" export (for Excel PivotTable) splits that back
- *                      into separate level columns. This array names those level columns in order
- *                      (e.g. ['ประเภทบุคลากร', 'เพศ']). Levels beyond the array, or when omitted
- *                      entirely, are labeled "ระดับที่ N" automatically.
+ *   value_label     : optional. The "tidy" export (for Excel PivotTable) turns every header level
+ *                      of a column into one combined, readable label (e.g. "ประถมศึกษาปีที่ 1") in a
+ *                      single column — this names that column (e.g. "ชั้นปี"). Defaults to "รายการ".
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every header row for that column, joined with " / ". This is what lets the
@@ -42,7 +40,7 @@ return [
                 'identity_cols'   => 3,
                 'identity_fields' => ['agency_name', 'admin_name', 'phone'],
                 'value_type'      => 'numeric', // จำนวนบุคลากรแยกชาย/หญิง
-                'value_level_labels' => ['หมวด', 'ประเภทบุคลากร', 'เพศ'],
+                'value_label'     => 'รายการบุคลากร', // เช่น "ข้าราชการชาย"
             ],
         ],
     ],
@@ -66,7 +64,7 @@ return [
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
                 'value_type'      => 'numeric', // ติ๊ก "/" = เปิดสอน, "-" = ไม่เปิดสอน ในแต่ละระดับชั้น
-                'value_level_labels' => ['หมวด', 'ระดับชั้น'],
+                'value_label'     => 'ระดับชั้น',
             ],
         ],
     ],
@@ -82,7 +80,7 @@ return [
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
                 'value_type'      => 'numeric', // จำนวนห้องเรียนแยกตามระดับชั้น
-                'value_level_labels' => ['ระดับการศึกษา', 'กลุ่มย่อย', 'ชั้นปี'],
+                'value_label'     => 'ชั้นปี', // เช่น "ประถมศึกษาปีที่ 1"
             ],
         ],
     ],

@@ -94,13 +94,16 @@ class Reporting
 
     /**
      * Long/"tidy" format for Excel PivotTable: one row per data point instead of one row
-     * per submission. The joined column_path (e.g. "ข้าราชการ / ชาย") is split back into
-     * separate level columns so each header level becomes its own draggable PivotTable field.
+     * per submission, with every header level joined back into a single readable label
+     * (e.g. "ประถมศึกษาปีที่ 1") instead of split across several columns — the source
+     * templates' header rows don't split into clean, independently-meaningful dimensions
+     * (a "ชั้นปี" of 1 means something different for ประถม vs อนุปริญญา vs ปริญญาตรี), so a
+     * single combined label is what's actually usable as a PivotTable row field.
      *
-     * @param string[] $levelLabels optional names for the split level columns, in order
-     * @return array{level_labels: string[], rows: array<int, array<string,mixed>>}
+     * @param string $valueLabel column header for the combined label (e.g. "ชั้นปี")
+     * @return array{value_label: string, rows: array<int, array<string,mixed>>}
      */
-    public function tidyRows(string $formKey, string $sheetName, array $levelLabels = []): array
+    public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ'): array
     {
         $subStmt = $this->db->prepare(
             'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon
@@ -112,7 +115,7 @@ class Reporting
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
-            return ['level_labels' => [], 'rows' => []];
+            return ['value_label' => $valueLabel, 'rows' => []];
         }
         $byId = [];
         foreach ($submissions as $s) {
@@ -129,22 +132,15 @@ class Reporting
         $valStmt->execute($ids);
         $values = $valStmt->fetchAll();
 
-        // First pass: split every column_path into its real header levels, then line them up
-        // into a fixed number of columns. Two wrinkles in the source templates make this more
-        // than a plain explode():
-        //  1. Some header cells are visual continuations of the cell above (e.g. a diagonally
-        //     split header shows "อนุบาล 2 (สช.)" then "/อนุบาล 1" in the row below) — these were
-        //     stored as their own part but start with "/", which marks them as a fragment rather
-        //     than a real new level, so they get glued back onto the previous part.
-        //  2. Different column groups within the same sheet don't always have the same number of
-        //     real levels (e.g. "ประถมศึกษา / ปีที่ 1" has 2, "มัธยมศึกษาตอนต้น / มัธยมศึกษา / ปี 1"
-        //     has 3) — left-aligning them would shove unrelated things into the same column. Instead
-        //     the first part always goes in the first column and the last part always goes in the
-        //     last column; anything in between fills the middle columns in order, so the same
-        //     column always holds the same kind of thing regardless of how deep that group's header is.
+        // Split every column_path into its real header levels: a part that starts with "/" is a
+        // visual continuation of the cell above it (e.g. a diagonally split header shows
+        // "อนุบาล 2 (สช.)" then "/อนุบาล 1" in the row below), not a genuine new level, so it gets
+        // glued back onto the previous part instead of becoming one.
         $splitPaths = [];
-        $maxDepth = 1;
         foreach ($values as $v) {
+            if (isset($splitPaths[$v['column_path']])) {
+                continue;
+            }
             $raw = array_map('trim', explode(' / ', $v['column_path']));
             $parts = [];
             foreach ($raw as $part) {
@@ -155,15 +151,38 @@ class Reporting
                 }
             }
             $splitPaths[$v['column_path']] = $parts;
-            $maxDepth = max($maxDepth, count($parts));
-        }
-        if ($levelLabels) {
-            $maxDepth = max($maxDepth, count($levelLabels));
         }
 
-        $labels = [];
-        for ($i = 0; $i < $maxDepth; $i++) {
-            $labels[] = $levelLabels[$i] ?? ('ระดับที่ ' . ($i + 1));
+        // A level that's identical across every single column in the sheet carries no
+        // distinguishing information (e.g. every column in form 1 starts with the constant
+        // "จำนวนบุคลากรในหน่วยงาน (คน)") — drop those constant leading levels from the label.
+        $allParts = array_values($splitPaths);
+        $dropLevels = 0;
+        if ($allParts) {
+            $shortest = min(array_map('count', $allParts));
+            for ($i = 0; $i < $shortest; $i++) {
+                $first = $allParts[0][$i];
+                $constant = true;
+                foreach ($allParts as $parts) {
+                    if ($parts[$i] !== $first) {
+                        $constant = false;
+                        break;
+                    }
+                }
+                if (!$constant) {
+                    break;
+                }
+                $dropLevels++;
+            }
+        }
+
+        $labelByPath = [];
+        foreach ($splitPaths as $path => $parts) {
+            $kept = array_slice($parts, $dropLevels);
+            if (!$kept) {
+                $kept = $parts;
+            }
+            $labelByPath[$path] = $this->joinLabel($kept);
         }
 
         $rows = [];
@@ -172,65 +191,43 @@ class Reporting
                 continue;
             }
             $s = $byId[$v['submission_id']];
-            $aligned = $this->alignLevels($splitPaths[$v['column_path']], $maxDepth);
-            $row = [
+            $rows[] = [
                 'seq_no'      => $s['seq_no'],
                 'school_code' => $s['school_code'],
                 'agency_name' => $s['agency_name'],
                 'school_name' => $s['school_name'],
                 'amphoe'      => $s['amphoe'],
                 'tambon'      => $s['tambon'],
+                $valueLabel   => $labelByPath[$v['column_path']],
+                'ค่า'         => $v['value'],
+                'ต้องตรวจสอบ' => $v['needs_review'] ? 'ใช่' : '',
             ];
-            for ($i = 0; $i < $maxDepth; $i++) {
-                $row[$labels[$i]] = $aligned[$i] ?? '';
-            }
-            $row['ค่า'] = $v['value'];
-            $row['ต้องตรวจสอบ'] = $v['needs_review'] ? 'ใช่' : '';
-            $rows[] = $row;
         }
 
-        return ['level_labels' => $labels, 'rows' => $rows];
+        return ['value_label' => $valueLabel, 'rows' => $rows];
     }
 
     /**
-     * Place a column's header parts into $width fixed slots: first part -> first slot,
-     * last part -> last slot, everything else fills the middle slots in order (overflow,
-     * if any, gets joined into the last middle slot). Missing slots are left blank.
+     * Join header level parts into one readable label. A bare number (e.g. "1") is joined onto
+     * the previous part with a space (so "ปีที่" + "1" -> "ปีที่ 1"); anything else is
+     * concatenated directly, matching how these level names are conventionally written together
+     * in Thai (e.g. "ประถมศึกษา" + "ปีที่ 1" -> "ประถมศึกษาปีที่ 1").
      *
      * @param string[] $parts
-     * @return string[]
      */
-    private function alignLevels(array $parts, int $width): array
+    private function joinLabel(array $parts): string
     {
-        $n = count($parts);
-        $out = array_fill(0, $width, '');
-        if ($n === 0) {
-            return $out;
-        }
-        if ($n === 1 || $width === 1) {
-            $out[0] = $parts[0];
-            return $out;
-        }
-
-        $out[0] = $parts[0];
-        $out[$width - 1] = $parts[$n - 1];
-
-        $middleParts = array_slice($parts, 1, $n - 2);
-        $middleSlots = $width - 2;
-        if ($middleSlots <= 0 || !$middleParts) {
-            return $out;
-        }
-        if (count($middleParts) <= $middleSlots) {
-            foreach ($middleParts as $i => $p) {
-                $out[1 + $i] = $p;
+        $label = '';
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
             }
-        } else {
-            // more middle parts than slots: fill slots 1:1, dump the remainder into the last one
-            for ($i = 0; $i < $middleSlots - 1; $i++) {
-                $out[1 + $i] = $middleParts[$i];
+            if ($label !== '' && ctype_digit($part)) {
+                $label .= ' ' . $part;
+            } else {
+                $label .= $part;
             }
-            $out[$middleSlots] = implode(' / ', array_slice($middleParts, $middleSlots - 1));
         }
-        return $out;
+        return $label;
     }
 }
