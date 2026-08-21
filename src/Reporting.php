@@ -222,26 +222,17 @@ class Reporting
     }
 
     /**
-     * Join header level parts into one readable label. A bare number (e.g. "1") is joined onto
-     * the previous part with a space (so "ปีที่" + "1" -> "ปีที่ 1"); anything else is
-     * concatenated directly, matching how these level names are conventionally written together
-     * in Thai (e.g. "ประถมศึกษา" + "ปีที่ 1" -> "ประถมศึกษาปีที่ 1").
+     * Join header level parts into one readable label with a single space between each
+     * (e.g. "ประถมศึกษา" + "ปีที่ 1" -> "ประถมศึกษา ปีที่ 1"). A plain space always reads
+     * correctly no matter how the sheet's header happens to be split across rows — unlike
+     * concatenating with no separator, which reads fine for "ปีที่" + "1" but jams unrelated
+     * words together for sheets whose levels are full phrases (e.g. a reason description
+     * split across two header rows, as in form 7).
      *
      * @param string[] $parts
      */
     private function joinLabel(array $parts): string
     {
-        $label = '';
-        foreach ($parts as $part) {
-            if ($part === '') {
-                continue;
-            }
-            if ($label !== '' && ctype_digit($part)) {
-                $label .= ' ' . $part;
-            } else {
-                $label .= $part;
-            }
-        }
-        return $label;
+        return implode(' ', array_filter($parts, fn($p) => $p !== ''));
     }
 }

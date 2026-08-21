@@ -172,4 +172,170 @@ return [
         ],
     ],
 
+    '7_dropout' => [
+        'form_label'     => 'ตารางที่ 7 จำนวนนักเรียนออกกลางคัน',
+        'source_file'    => '7_จำนวนนักเรียนออกกลางคัน.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '7.1ออกกลางคัน ประถม ',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนออกกลางคันแยกตามชั้นปี สาเหตุ และเพศ
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '7.2ออกกลางคัน มัธยมต้น',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '7.3ออกกลางคัน มัธยมปลาย',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '7.4ออกกลางคัน วิชาชีพ',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '7.4ออกกลางคัน ปวส.',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '7.5ออกกลางคัน ป.ตรี',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'ชั้นปี/สาเหตุ',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
+    '8_disability' => [
+        'form_label'     => 'ตารางที่ 8 จำนวนนักเรียนพิการ',
+        'source_file'    => '8_จำนวนนักเรียนพิการ.xlsx',
+        'sheets' => [
+            [
+                'sheet_name'      => '8.1 นักเรียนพิการ',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนนักเรียนพิการแยกตามชั้นปีและเพศ
+                'value_label'     => 'ชั้นปี',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '8.2 ประเภทความพิการ',
+                // แถว 3 เป็นหมวดกว้าง "ประเภทความพิการ" ซ้ำทุกคอลัมน์ ไม่ช่วยแยกแยะ จึงข้ามไป
+                'skip_rows'       => [1, 2, 3],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนแยกตามประเภทความพิการและเพศ (มีคอลัมน์ "รวม" ท้ายตารางด้วย)
+                'value_label'     => 'ประเภทความพิการ',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
+    '9_graduates' => [
+        'form_label'     => 'ตารางที่ 9 ข้อมูลผู้สำเร็จการศึกษา',
+        'source_file'    => '9_ข้อมูลผู้สำเร็จการศึกษา.xlsx',
+        // หมายเหตุ: ชีท "9.สรุป" ไม่รองรับ — เป็นแบบสรุปที่กรอกครั้งเดียวต่อหน่วยงาน (มีช่อง
+        // "หน่วยงาน..." ให้เติมคำเอง ไม่ใช่คอลัมน์ตาราง) และมีแค่ 3 แถวคงที่ ไม่ใช่ 1 แถวต่อโรงเรียน
+        // แบบชีทอื่น ๆ จึงไม่เข้ากับ engine ทั่วไปนี้ ต้องออกแบบแยกต่างหากถ้าต้องการใช้งาน
+        'sheets' => [
+            [
+                'sheet_name'      => '9.1ผู้สำเร็จการศึกษา',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สำเร็จการศึกษาแยกตามระดับชั้นและเพศ
+                'value_label'     => 'ชั้นปี',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '9.2 ผู้สำเร็จสายอาชีพ',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 6,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนผู้สำเร็จสายอาชีพแยกตามระดับชั้น สาขาวิชา และเพศ
+                'value_label'     => 'ชั้นปี/สาขาวิชา',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '9.3 จบ ป.6',
+                // แถว 3 ส่วนใหญ่ซ้ำคำว่า "จำนวนนักเรียน" ไม่ช่วยแยกแยะ ตัวแยกแยะจริงอยู่แถว 4
+                'skip_rows'       => [1, 2, 3],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric', // จำนวนนักเรียนจบ ป.6 แยกตามสถานะศึกษาต่อและเพศ
+                'value_label'     => 'สถานะ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '9.4 จบ ม.3',
+                'skip_rows'       => [1, 2, 3],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'สถานะ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '9.5 ม.6',
+                'skip_rows'       => [1, 2, 3],
+                'header_rows'     => 5,
+                'identity_cols'   => 6,
+                'identity_fields' => $stdIdentity,
+                'value_type'      => 'numeric',
+                'value_label'     => 'สถานะ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '9.6 จบมีงานทำ',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 5,
+                'identity_cols'   => 2,
+                'identity_fields' => ['school_code', 'school_name'],
+                'value_type'      => 'numeric', // จำนวนผู้สำเร็จการศึกษาที่มีงานทำ แยกตามระดับชั้นและเพศ
+                'value_label'     => 'ชั้นปี',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
 ];
