@@ -37,29 +37,43 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
     </div>
   <?php endif; ?>
 
-  <div class="grid-cards">
-    <?php foreach ($forms as $formKey => $formDef): ?>
-      <?php foreach ($formDef['sheets'] as $sheetDef): ?>
-        <?php
-          $sheetName = $sheetDef['sheet_name'];
-          $countStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
-          $count = (int)$countStmt->fetchColumn();
-          $lastStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
-          $lastUpload = $lastStmt->fetchColumn();
-        ?>
-        <div class="card form-card">
-          <div class="muted"><?= h($formDef['form_label']) ?></div>
-          <h2 style="margin-top:4px;"><?= h($sheetName) ?></h2>
-          <div class="count"><?= $count ?></div>
-          <div class="muted">รายการที่รวบรวมแล้ว</div>
-          <div class="muted" style="margin:8px 0 16px;">
-            อัปโหลดล่าสุด: <?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?>
-          </div>
-          <a class="btn" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
-          <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดูข้อมูล</a>
-        </div>
-      <?php endforeach; ?>
-    <?php endforeach; ?>
+  <div class="card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ฟอร์ม</th>
+            <th>ชีท</th>
+            <th>จำนวนรายการ</th>
+            <th>อัปโหลดล่าสุด</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($forms as $formKey => $formDef): ?>
+          <?php foreach ($formDef['sheets'] as $sheetDef): ?>
+            <?php
+              $sheetName = $sheetDef['sheet_name'];
+              $countStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+              $count = (int)$countStmt->fetchColumn();
+              $lastStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+              $lastUpload = $lastStmt->fetchColumn();
+            ?>
+            <tr>
+              <td><?= h($formDef['form_label']) ?></td>
+              <td><?= h($sheetName) ?></td>
+              <td><?= $count ?></td>
+              <td class="muted"><?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?></td>
+              <td style="white-space:nowrap;">
+                <a class="btn" style="padding:6px 12px; font-size:13px;" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
+                <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px;" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดูข้อมูล</a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 </body>
