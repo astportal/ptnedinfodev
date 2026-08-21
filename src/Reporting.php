@@ -129,23 +129,36 @@ class Reporting
         $valStmt->execute($ids);
         $values = $valStmt->fetchAll();
 
-        // First pass: split every column_path into level columns. When $levelLabels is given,
-        // it also caps how many columns to split into — the source template's header rows don't
-        // always map cleanly one-to-one onto meaningful fields (e.g. a header row that's really a
-        // continuation/footnote of the row above it), so anything past the last named level stays
-        // joined together in that final column instead of spilling into an extra, confusing one.
-        $targetDepth = $levelLabels ? count($levelLabels) : null;
+        // First pass: split every column_path into its real header levels, then line them up
+        // into a fixed number of columns. Two wrinkles in the source templates make this more
+        // than a plain explode():
+        //  1. Some header cells are visual continuations of the cell above (e.g. a diagonally
+        //     split header shows "อนุบาล 2 (สช.)" then "/อนุบาล 1" in the row below) — these were
+        //     stored as their own part but start with "/", which marks them as a fragment rather
+        //     than a real new level, so they get glued back onto the previous part.
+        //  2. Different column groups within the same sheet don't always have the same number of
+        //     real levels (e.g. "ประถมศึกษา / ปีที่ 1" has 2, "มัธยมศึกษาตอนต้น / มัธยมศึกษา / ปี 1"
+        //     has 3) — left-aligning them would shove unrelated things into the same column. Instead
+        //     the first part always goes in the first column and the last part always goes in the
+        //     last column; anything in between fills the middle columns in order, so the same
+        //     column always holds the same kind of thing regardless of how deep that group's header is.
         $splitPaths = [];
         $maxDepth = 1;
         foreach ($values as $v) {
-            $parts = $targetDepth
-                ? array_map('trim', explode(' / ', $v['column_path'], $targetDepth))
-                : array_map('trim', explode(' / ', $v['column_path']));
+            $raw = array_map('trim', explode(' / ', $v['column_path']));
+            $parts = [];
+            foreach ($raw as $part) {
+                if ($part !== '' && $part[0] === '/' && $parts) {
+                    $parts[count($parts) - 1] .= ' ' . $part;
+                } else {
+                    $parts[] = $part;
+                }
+            }
             $splitPaths[$v['column_path']] = $parts;
             $maxDepth = max($maxDepth, count($parts));
         }
-        if ($targetDepth) {
-            $maxDepth = $targetDepth;
+        if ($levelLabels) {
+            $maxDepth = max($maxDepth, count($levelLabels));
         }
 
         $labels = [];
@@ -159,7 +172,7 @@ class Reporting
                 continue;
             }
             $s = $byId[$v['submission_id']];
-            $parts = $splitPaths[$v['column_path']];
+            $aligned = $this->alignLevels($splitPaths[$v['column_path']], $maxDepth);
             $row = [
                 'seq_no'      => $s['seq_no'],
                 'school_code' => $s['school_code'],
@@ -169,7 +182,7 @@ class Reporting
                 'tambon'      => $s['tambon'],
             ];
             for ($i = 0; $i < $maxDepth; $i++) {
-                $row[$labels[$i]] = $parts[$i] ?? '';
+                $row[$labels[$i]] = $aligned[$i] ?? '';
             }
             $row['ค่า'] = $v['value'];
             $row['ต้องตรวจสอบ'] = $v['needs_review'] ? 'ใช่' : '';
@@ -177,5 +190,47 @@ class Reporting
         }
 
         return ['level_labels' => $labels, 'rows' => $rows];
+    }
+
+    /**
+     * Place a column's header parts into $width fixed slots: first part -> first slot,
+     * last part -> last slot, everything else fills the middle slots in order (overflow,
+     * if any, gets joined into the last middle slot). Missing slots are left blank.
+     *
+     * @param string[] $parts
+     * @return string[]
+     */
+    private function alignLevels(array $parts, int $width): array
+    {
+        $n = count($parts);
+        $out = array_fill(0, $width, '');
+        if ($n === 0) {
+            return $out;
+        }
+        if ($n === 1 || $width === 1) {
+            $out[0] = $parts[0];
+            return $out;
+        }
+
+        $out[0] = $parts[0];
+        $out[$width - 1] = $parts[$n - 1];
+
+        $middleParts = array_slice($parts, 1, $n - 2);
+        $middleSlots = $width - 2;
+        if ($middleSlots <= 0 || !$middleParts) {
+            return $out;
+        }
+        if (count($middleParts) <= $middleSlots) {
+            foreach ($middleParts as $i => $p) {
+                $out[1 + $i] = $p;
+            }
+        } else {
+            // more middle parts than slots: fill slots 1:1, dump the remainder into the last one
+            for ($i = 0; $i < $middleSlots - 1; $i++) {
+                $out[1 + $i] = $middleParts[$i];
+            }
+            $out[$middleSlots] = implode(' / ', array_slice($middleParts, $middleSlots - 1));
+        }
+        return $out;
     }
 }
