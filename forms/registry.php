@@ -19,6 +19,10 @@
  *   value_label     : optional. The "tidy" export (for Excel PivotTable) turns every header level
  *                      of a column into one combined, readable label (e.g. "ประถมศึกษาปีที่ 1") in a
  *                      single column — this names that column (e.g. "ชั้นปี"). Defaults to "รายการ".
+ *   value_split_last : optional. Pulls the last header level out into its own column with this
+ *                      name (e.g. "เพศ") instead of joining it into value_label — use when the last
+ *                      level is a genuinely independent dimension (ชาย/หญิง) that reads better on
+ *                      its own than glued onto the category name.
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every header row for that column, joined with " / ". This is what lets the
@@ -40,7 +44,8 @@ return [
                 'identity_cols'   => 3,
                 'identity_fields' => ['agency_name', 'admin_name', 'phone'],
                 'value_type'      => 'numeric', // จำนวนบุคลากรแยกชาย/หญิง
-                'value_label'     => 'รายการบุคลากร', // เช่น "ข้าราชการชาย"
+                'value_label'     => 'ประเภทบุคลากร', // เช่น "ข้าราชการ"
+                'value_split_last' => 'เพศ', // แยก ชาย/หญิง ออกมาเป็นอีกคอลัมน์
             ],
         ],
     ],

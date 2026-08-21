@@ -27,7 +27,7 @@ if (!$sheetDef) {
 }
 
 $reporting = new Reporting($db);
-$tidy = $reporting->tidyRows($formKey, $sheetName, $sheetDef['value_label'] ?? 'รายการ');
+$tidy = $reporting->tidyRows($formKey, $sheetName, $sheetDef['value_label'] ?? 'รายการ', $sheetDef['value_split_last'] ?? null);
 
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
@@ -42,7 +42,11 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดภาษาไทยถูกต้อง
 
-$header = array_merge(array_values($identityLabels), [$tidy['value_label'], 'ค่า', 'ต้องตรวจสอบ']);
+$valueCols = [$tidy['value_label']];
+if ($tidy['split_label']) {
+    $valueCols[] = $tidy['split_label'];
+}
+$header = array_merge(array_values($identityLabels), $valueCols, ['ค่า', 'ต้องตรวจสอบ']);
 fputcsv($out, $header);
 
 foreach ($tidy['rows'] as $row) {
@@ -50,7 +54,9 @@ foreach ($tidy['rows'] as $row) {
     foreach (array_keys($identityLabels) as $key) {
         $line[] = $row[$key] ?? '';
     }
-    $line[] = $row[$tidy['value_label']] ?? '';
+    foreach ($valueCols as $col) {
+        $line[] = $row[$col] ?? '';
+    }
     $line[] = $row['ค่า'] ?? '';
     $line[] = $row['ต้องตรวจสอบ'] ?? '';
     fputcsv($out, $line);

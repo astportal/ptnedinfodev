@@ -101,9 +101,13 @@ class Reporting
      * single combined label is what's actually usable as a PivotTable row field.
      *
      * @param string $valueLabel column header for the combined label (e.g. "ชั้นปี")
-     * @return array{value_label: string, rows: array<int, array<string,mixed>>}
+     * @param string|null $splitLastLabel when given, the last header level (e.g. "ชาย"/"หญิง") is
+     *                     pulled out into its own column with this name instead of being joined
+     *                     into $valueLabel — use for sheets that end in a genuinely independent
+     *                     dimension like gender, which reads better as its own PivotTable field.
+     * @return array{value_label: string, split_label: ?string, rows: array<int, array<string,mixed>>}
      */
-    public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ'): array
+    public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ', ?string $splitLastLabel = null): array
     {
         $subStmt = $this->db->prepare(
             'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon
@@ -115,7 +119,7 @@ class Reporting
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
-            return ['value_label' => $valueLabel, 'rows' => []];
+            return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'rows' => []];
         }
         $byId = [];
         foreach ($submissions as $s) {
@@ -177,10 +181,16 @@ class Reporting
         }
 
         $labelByPath = [];
+        $splitValueByPath = [];
         foreach ($splitPaths as $path => $parts) {
             $kept = array_slice($parts, $dropLevels);
             if (!$kept) {
                 $kept = $parts;
+            }
+            if ($splitLastLabel !== null && count($kept) >= 2) {
+                $splitValueByPath[$path] = array_pop($kept);
+            } else {
+                $splitValueByPath[$path] = '';
             }
             $labelByPath[$path] = $this->joinLabel($kept);
         }
@@ -191,7 +201,7 @@ class Reporting
                 continue;
             }
             $s = $byId[$v['submission_id']];
-            $rows[] = [
+            $row = [
                 'seq_no'      => $s['seq_no'],
                 'school_code' => $s['school_code'],
                 'agency_name' => $s['agency_name'],
@@ -199,12 +209,16 @@ class Reporting
                 'amphoe'      => $s['amphoe'],
                 'tambon'      => $s['tambon'],
                 $valueLabel   => $labelByPath[$v['column_path']],
-                'ค่า'         => $v['value'],
-                'ต้องตรวจสอบ' => $v['needs_review'] ? 'ใช่' : '',
             ];
+            if ($splitLastLabel !== null) {
+                $row[$splitLastLabel] = $splitValueByPath[$v['column_path']];
+            }
+            $row['ค่า'] = $v['value'];
+            $row['ต้องตรวจสอบ'] = $v['needs_review'] ? 'ใช่' : '';
+            $rows[] = $row;
         }
 
-        return ['value_label' => $valueLabel, 'rows' => $rows];
+        return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'rows' => $rows];
     }
 
     /**
