@@ -11,9 +11,11 @@ class Reporting
     }
 
     /**
-     * @return array{columns: array<int,string>, rows: array<int, array<string,mixed>>, totals: array<string,string>}
+     * @return array{columns: array<int,string>, extra_identity_fields: string[], rows: array<int, array<string,mixed>>, totals: array<string,string>}
      *   columns: col_index => column_path, in original column order
-     *   rows: each row has identity fields + one entry per column_path (keyed by column_path)
+     *   extra_identity_fields: names of any non-standard identity fields this sheet uses (e.g.
+     *     "age_group", "center_type" — see forms/registry.php identity_fields), in first-seen order
+     *   rows: each row has identity fields (standard + extra) + one entry per column_path
      *   totals: column_path => sum of all numeric values in that column (blank if the column has no numeric values)
      */
     public function pivot(string $formKey, string $sheetName): array
@@ -28,7 +30,7 @@ class Reporting
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
-            return ['columns' => [], 'rows' => [], 'totals' => []];
+            return ['columns' => [], 'extra_identity_fields' => [], 'rows' => [], 'totals' => []];
         }
 
         $ids = array_column($submissions, 'id');
@@ -49,8 +51,16 @@ class Reporting
         }
         ksort($columns);
 
+        $extraIdentityFields = [];
         $rows = [];
         foreach ($submissions as $s) {
+            $extra = $s['extra_identity'] ? json_decode($s['extra_identity'], true) : [];
+            foreach (array_keys($extra) as $field) {
+                if (!in_array($field, $extraIdentityFields, true)) {
+                    $extraIdentityFields[] = $field;
+                }
+            }
+
             $row = [
                 'id'          => $s['id'],
                 'seq_no'      => $s['seq_no'],
@@ -61,6 +71,9 @@ class Reporting
                 'tambon'      => $s['tambon'],
                 '_needs_review' => [],
             ];
+            foreach ($extra as $field => $val) {
+                $row[$field] = $val;
+            }
             foreach ($columns as $path) {
                 $row[$path] = $valuesBySubmission[$s['id']][$path] ?? '';
                 if ($reviewFlags[$s['id']][$path] ?? false) {
@@ -89,7 +102,7 @@ class Reporting
             $totals[$path] = (fmod($sum, 1.0) === 0.0) ? (string)(int)$sum : (string)$sum;
         }
 
-        return ['columns' => $columns, 'rows' => $rows, 'totals' => $totals];
+        return ['columns' => $columns, 'extra_identity_fields' => $extraIdentityFields, 'rows' => $rows, 'totals' => $totals];
     }
 
     /**
@@ -105,12 +118,12 @@ class Reporting
      *                     pulled out into its own column with this name instead of being joined
      *                     into $valueLabel — use for sheets that end in a genuinely independent
      *                     dimension like gender, which reads better as its own PivotTable field.
-     * @return array{value_label: string, split_label: ?string, rows: array<int, array<string,mixed>>}
+     * @return array{value_label: string, split_label: ?string, extra_identity_fields: string[], rows: array<int, array<string,mixed>>}
      */
     public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ', ?string $splitLastLabel = null): array
     {
         $subStmt = $this->db->prepare(
-            'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon
+            'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity
              FROM submissions
              WHERE form_key = :fk AND sheet_name = :sn
              ORDER BY agency_name, school_name, id'
@@ -119,11 +132,20 @@ class Reporting
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
-            return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'rows' => []];
+            return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'extra_identity_fields' => [], 'rows' => []];
         }
         $byId = [];
+        $extraById = [];
+        $extraIdentityFields = [];
         foreach ($submissions as $s) {
             $byId[$s['id']] = $s;
+            $extra = $s['extra_identity'] ? json_decode($s['extra_identity'], true) : [];
+            $extraById[$s['id']] = $extra;
+            foreach (array_keys($extra) as $field) {
+                if (!in_array($field, $extraIdentityFields, true)) {
+                    $extraIdentityFields[] = $field;
+                }
+            }
         }
 
         $ids = array_keys($byId);
@@ -208,8 +230,11 @@ class Reporting
                 'school_name' => $s['school_name'],
                 'amphoe'      => $s['amphoe'],
                 'tambon'      => $s['tambon'],
-                $valueLabel   => $labelByPath[$v['column_path']],
             ];
+            foreach ($extraById[$v['submission_id']] as $field => $val) {
+                $row[$field] = $val;
+            }
+            $row[$valueLabel] = $labelByPath[$v['column_path']];
             if ($splitLastLabel !== null) {
                 $row[$splitLastLabel] = $splitValueByPath[$v['column_path']];
             }
@@ -218,7 +243,7 @@ class Reporting
             $rows[] = $row;
         }
 
-        return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'rows' => $rows];
+        return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'extra_identity_fields' => $extraIdentityFields, 'rows' => $rows];
     }
 
     /**

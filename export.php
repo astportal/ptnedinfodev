@@ -26,13 +26,17 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel opens Thai text correctly
 
-$header = array_merge(array_values($identityLabels), array_values($pivot['columns']));
+$extraLabels = array_map('extra_identity_label', $pivot['extra_identity_fields']);
+$header = array_merge(array_values($identityLabels), $extraLabels, array_values($pivot['columns']));
 fputcsv($out, $header);
 
 foreach ($pivot['rows'] as $row) {
     $line = [];
     foreach (array_keys($identityLabels) as $key) {
         $line[] = $row[$key] ?? '';
+    }
+    foreach ($pivot['extra_identity_fields'] as $field) {
+        $line[] = $row[$field] ?? '';
     }
     foreach ($pivot['columns'] as $path) {
         $line[] = $row[$path] ?? '';
@@ -43,6 +47,9 @@ foreach ($pivot['rows'] as $row) {
 if ($pivot['rows']) {
     $totalLine = ['รวมทั้งหมด'];
     foreach (array_slice(array_keys($identityLabels), 1) as $key) {
+        $totalLine[] = '';
+    }
+    foreach ($pivot['extra_identity_fields'] as $field) {
         $totalLine[] = '';
     }
     foreach ($pivot['columns'] as $path) {

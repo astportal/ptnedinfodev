@@ -46,13 +46,17 @@ $valueCols = [$tidy['value_label']];
 if ($tidy['split_label']) {
     $valueCols[] = $tidy['split_label'];
 }
-$header = array_merge(array_values($identityLabels), $valueCols, ['ค่า', 'ต้องตรวจสอบ']);
+$extraLabels = array_map('extra_identity_label', $tidy['extra_identity_fields']);
+$header = array_merge(array_values($identityLabels), $extraLabels, $valueCols, ['ค่า', 'ต้องตรวจสอบ']);
 fputcsv($out, $header);
 
 foreach ($tidy['rows'] as $row) {
     $line = [];
     foreach (array_keys($identityLabels) as $key) {
         $line[] = $row[$key] ?? '';
+    }
+    foreach ($tidy['extra_identity_fields'] as $field) {
+        $line[] = $row[$field] ?? '';
     }
     foreach ($valueCols as $col) {
         $line[] = $row[$col] ?? '';

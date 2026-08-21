@@ -79,6 +79,9 @@ $identityLabels = [
               <?php foreach ($identityLabels as $key => $label): ?>
                 <th><?= h($label) ?></th>
               <?php endforeach; ?>
+              <?php foreach ($pivot['extra_identity_fields'] as $field): ?>
+                <th><?= h(extra_identity_label($field)) ?></th>
+              <?php endforeach; ?>
               <?php foreach ($pivot['columns'] as $path): ?>
                 <th><?= h($path) ?></th>
               <?php endforeach; ?>
@@ -90,6 +93,9 @@ $identityLabels = [
               <tr>
                 <?php foreach (array_keys($identityLabels) as $key): ?>
                   <td><?= h((string)($row[$key] ?? '')) ?></td>
+                <?php endforeach; ?>
+                <?php foreach ($pivot['extra_identity_fields'] as $field): ?>
+                  <td><?= h((string)($row[$field] ?? '')) ?></td>
                 <?php endforeach; ?>
                 <?php foreach ($pivot['columns'] as $path): ?>
                   <?php $flagged = !empty($row['_needs_review'][$path]); ?>
@@ -112,6 +118,9 @@ $identityLabels = [
               <?php for ($i = 1; $i < count($identityLabels); $i++): ?>
                 <td></td>
               <?php endfor; ?>
+              <?php foreach ($pivot['extra_identity_fields'] as $field): ?>
+                <td></td>
+              <?php endforeach; ?>
               <?php foreach ($pivot['columns'] as $path): ?>
                 <td><?= h((string)($pivot['totals'][$path] ?? '')) ?></td>
               <?php endforeach; ?>

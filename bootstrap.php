@@ -23,3 +23,16 @@ function h(?string $s): string
 {
     return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8');
 }
+
+/**
+ * Human label for a non-standard identity field name used in some sheets'
+ * identity_fields (see forms/registry.php) — falls back to the raw field name.
+ */
+function extra_identity_label(string $field): string
+{
+    static $labels = [
+        'age_group'  => 'ช่วงอายุ',
+        'center_type' => 'ประเภทศูนย์',
+    ];
+    return $labels[$field] ?? $field;
+}

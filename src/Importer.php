@@ -133,6 +133,9 @@ class Importer
         ]);
         $uploadId = (int)$this->db->lastInsertId();
 
+        $carryFields = $sheetDef['carry_identity_fields'] ?? [];
+        $carried = [];
+
         $rowsImported = 0;
         $needsReviewCount = 0;
         $this->db->beginTransaction();
@@ -146,6 +149,17 @@ class Importer
                 $identity = [];
                 foreach ($identityFields as $i => $fieldName) {
                     $identity[$fieldName] = trim((string)($rowData[$i + 1] ?? ''));
+                }
+
+                // Some sheets only write the agency/school name on the first row of a block and
+                // leave it blank on the rows below (e.g. one row per age bracket, same entity) —
+                // those fields inherit the last non-blank value seen for that column.
+                foreach ($carryFields as $field) {
+                    if (($identity[$field] ?? '') === '' && isset($carried[$field])) {
+                        $identity[$field] = $carried[$field];
+                    } elseif (($identity[$field] ?? '') !== '') {
+                        $carried[$field] = $identity[$field];
+                    }
                 }
 
                 $knownFields = ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'];
@@ -164,9 +178,14 @@ class Importer
                     }
                 }
 
-                // Upsert key: same form+sheet+school_code (or agency_name when no school_code)
-                // re-imports replace the previous submission for that same entity.
-                $this->deleteExistingSubmission($formKey, $sheetName, $standard['school_code'], $standard['agency_name']);
+                $extraJson = $extra ? json_encode($extra, JSON_UNESCAPED_UNICODE) : null;
+
+                // Upsert key: same form+sheet+school_code, or — when there's no school_code —
+                // the same agency_name + school_name + extra_identity together (NULL-safe), so
+                // multiple rows that share an agency (e.g. several centers under one อปท., or
+                // several age-bracket rows for one agency) don't overwrite each other; re-imports
+                // still replace the previous submission for that same exact entity.
+                $this->deleteExistingSubmission($formKey, $sheetName, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
 
                 $ins = $this->db->prepare(
                     'INSERT INTO submissions
@@ -185,7 +204,7 @@ class Importer
                     'school_name'    => $standard['school_name'],
                     'amphoe'         => $standard['amphoe'],
                     'tambon'         => $standard['tambon'],
-                    'extra_identity' => $extra ? json_encode($extra, JSON_UNESCAPED_UNICODE) : null,
+                    'extra_identity' => $extraJson,
                 ]);
                 $submissionId = (int)$this->db->lastInsertId();
 
@@ -250,7 +269,7 @@ class Importer
         return [$raw, true];
     }
 
-    private function deleteExistingSubmission(string $formKey, string $sheetName, ?string $schoolCode, ?string $agencyName): void
+    private function deleteExistingSubmission(string $formKey, string $sheetName, ?string $schoolCode, ?string $agencyName, ?string $schoolName, ?string $extraJson): void
     {
         if ($schoolCode) {
             $del = $this->db->prepare(
@@ -258,10 +277,15 @@ class Importer
             );
             $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'sc' => $schoolCode]);
         } elseif ($agencyName) {
+            // NULL-safe equality (<=>) so this still matches correctly when school_name/extra_identity
+            // are legitimately absent for this sheet, without falsely matching a different sub-row
+            // (different school under the same agency, or a different extra_identity combination)
+            // that just happens to share the same agency_name.
             $del = $this->db->prepare(
-                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND school_code IS NULL AND agency_name = :an'
+                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND school_code IS NULL
+                 AND agency_name <=> :an AND school_name <=> :snm AND extra_identity <=> :ei'
             );
-            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'an' => $agencyName]);
+            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'an' => $agencyName, 'snm' => $schoolName, 'ei' => $extraJson]);
         }
     }
 

@@ -476,50 +476,27 @@ return [
         ),
     ],
 
-    '15_private_nonformal' => [
-        'form_label'     => 'ตารางที่ 15 ข้อมูลโรงเรียนเอกชนนอกระบบ',
-        'source_file'    => '15_ข้อมูลโรงเรียนเอกชนนอกระบบ.xlsx',
-        // หมายเหตุ: ไม่รองรับชีท "สช.วิชาชีพ" (15.4) และ "สช.วิชาชีพ-ครู-นร." (15.5) — ทั้งสอง
-        // ชีทมีแถวที่เป็น "หัวข้อคั่นหมวด" ปนอยู่กับแถวข้อมูลจริง (ไม่ใช่ทุกแถวคือ 1 โรงเรียน)
-        // และไฟล์ต้นฉบับมีข้อมูลตัวอย่างจริงของ จ.ปัตตานีฝังไว้ในแม่แบบ (ไม่ใช่ข้อความ placeholder
-        // ทั่วไป) ทำให้ระบบแยกไม่ออกว่าแถวไหนเป็นตัวอย่างจากแม่แบบหรือข้อมูลจริงที่กรอกมา
+    // หมายเหตุ: ไม่รองรับไฟล์ 15_ข้อมูลโรงเรียนเอกชนนอกระบบ.xlsx ตามคำขอของผู้ใช้งาน
+
+    '13_age_by_grade' => [
+        'form_label'     => 'ตารางที่ 13 จำนวนนักเรียนแยกอายุ รายชั้นเรียน',
+        'source_file'    => '13_จำนวนนักเรียนแยกรายชั้น.xlsx',
         'sheets' => [
             [
-                'sheet_name'      => '15.1',
-                'skip_rows'       => [1, 2],
-                'header_rows'     => 4,
-                'identity_cols'   => 10,
-                'identity_fields' => ['school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'license_holder', 'manager_name', 'headmaster_name'],
-                'value_type'      => 'numeric', // จำนวนผู้สอน/ผู้เรียน แยกตามเพศ
-                'value_label'     => 'รายการ',
-                'value_split_last' => 'เพศ',
-            ],
-            [
-                'sheet_name'      => '15.2',
-                'skip_rows'       => [1, 2],
-                'header_rows'     => 4,
-                'identity_cols'   => 10,
-                'identity_fields' => ['seq_no', 'school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'headmaster_name', 'institution_size'],
-                'value_type'      => 'numeric', // จำนวนโต๊ะครู/ผู้เรียน แยกตามเพศ
-                'value_label'     => 'รายการ',
-                'value_split_last' => 'เพศ',
-            ],
-            [
-                'sheet_name'      => '15.3',
-                'skip_rows'       => [1, 2],
-                'header_rows'     => 4,
-                'identity_cols'   => 10,
-                'identity_fields' => ['seq_no', 'school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'manager_name', 'institution_size'],
-                'value_type'      => 'numeric', // จำนวนผู้สอน/ผู้เรียน แยกตามเพศ
-                'value_label'     => 'รายการ',
-                'value_split_last' => 'เพศ',
+                'sheet_name'      => '13.นักเรียนแยกอายุรายชั้น',
+                // ชีทนี้ต่างจากชีทอื่นทั้งหมด: 1 หน่วยงานกรอกหลายแถว (แถวละ 1 ช่วงอายุ) แทนที่จะ
+                // เป็น 1 แถวต่อสถานศึกษา — ชื่อหน่วยงานเขียนไว้แค่แถวแรกของหน่วยงานนั้นแล้วเว้นว่าง
+                // ในแถวถัดไป (carry_identity_fields ให้สืบทอดชื่อหน่วยงานลงมาจนกว่าจะเจอชื่อใหม่)
+                'skip_rows'       => [1],
+                'header_rows'     => 5,
+                'identity_cols'   => 2,
+                'identity_fields' => ['agency_name', 'age_group'],
+                'carry_identity_fields' => ['agency_name'],
+                'value_type'      => 'numeric', // จำนวนนักเรียนแยกตามระดับชั้น+เพศ (รวมอยู่ในคอลัมน์เดียวต่อชั้น)
+                'value_label'     => 'ระดับชั้น/เพศ',
             ],
         ],
     ],
-
-    // หมายเหตุ: ยังไม่รองรับไฟล์ 13_จำนวนนักเรียนแยกรายชั้น.xlsx — ชีทนั้นเป็นตารางไขว้ 2 มิติ
-    // (แถว = ช่วงอายุของหน่วยงานนั้น, คอลัมน์ = ชั้น+เพศ) กรอกหลายแถวต่อหน่วยงานเดียว
-    // ไม่ใช่ 1 แถวต่อสถานศึกษาแบบชีทอื่น ต้องออกแบบแยกต่างหากเหมือน "9.สรุป"
 
     '14a_childcare_centers' => [
         'form_label'     => 'ตารางที่ 14ก ข้อมูลศูนย์พัฒนาเด็กเล็ก',
