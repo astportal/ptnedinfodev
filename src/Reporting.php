@@ -91,4 +91,82 @@ class Reporting
 
         return ['columns' => $columns, 'rows' => $rows, 'totals' => $totals];
     }
+
+    /**
+     * Long/"tidy" format for Excel PivotTable: one row per data point instead of one row
+     * per submission. The joined column_path (e.g. "ข้าราชการ / ชาย") is split back into
+     * separate level columns so each header level becomes its own draggable PivotTable field.
+     *
+     * @param string[] $levelLabels optional names for the split level columns, in order
+     * @return array{level_labels: string[], rows: array<int, array<string,mixed>>}
+     */
+    public function tidyRows(string $formKey, string $sheetName, array $levelLabels = []): array
+    {
+        $subStmt = $this->db->prepare(
+            'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon
+             FROM submissions
+             WHERE form_key = :fk AND sheet_name = :sn
+             ORDER BY agency_name, school_name, id'
+        );
+        $subStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+        $submissions = $subStmt->fetchAll();
+
+        if (!$submissions) {
+            return ['level_labels' => [], 'rows' => []];
+        }
+        $byId = [];
+        foreach ($submissions as $s) {
+            $byId[$s['id']] = $s;
+        }
+
+        $ids = array_keys($byId);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $valStmt = $this->db->prepare(
+            "SELECT submission_id, col_index, column_path, value, needs_review FROM submission_values
+             WHERE submission_id IN ($placeholders)
+             ORDER BY submission_id, col_index"
+        );
+        $valStmt->execute($ids);
+        $values = $valStmt->fetchAll();
+
+        // First pass: split every column_path and find the deepest level used in this sheet,
+        // so every output row has the same fixed set of level columns (required for a clean pivot).
+        $splitPaths = [];
+        $maxDepth = 1;
+        foreach ($values as $v) {
+            $parts = array_map('trim', explode(' / ', $v['column_path']));
+            $splitPaths[$v['column_path']] = $parts;
+            $maxDepth = max($maxDepth, count($parts));
+        }
+
+        $labels = [];
+        for ($i = 0; $i < $maxDepth; $i++) {
+            $labels[] = $levelLabels[$i] ?? ('ระดับที่ ' . ($i + 1));
+        }
+
+        $rows = [];
+        foreach ($values as $v) {
+            if ($v['value'] === null || $v['value'] === '') {
+                continue;
+            }
+            $s = $byId[$v['submission_id']];
+            $parts = $splitPaths[$v['column_path']];
+            $row = [
+                'seq_no'      => $s['seq_no'],
+                'school_code' => $s['school_code'],
+                'agency_name' => $s['agency_name'],
+                'school_name' => $s['school_name'],
+                'amphoe'      => $s['amphoe'],
+                'tambon'      => $s['tambon'],
+            ];
+            for ($i = 0; $i < $maxDepth; $i++) {
+                $row[$labels[$i]] = $parts[$i] ?? '';
+            }
+            $row['ค่า'] = $v['value'];
+            $row['ต้องตรวจสอบ'] = $v['needs_review'] ? 'ใช่' : '';
+            $rows[] = $row;
+        }
+
+        return ['level_labels' => $labels, 'rows' => $rows];
+    }
 }

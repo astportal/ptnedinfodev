@@ -61,6 +61,7 @@ $identityLabels = [
     <h2 class="muted" style="font-weight:400;"><?= h($sheetName) ?></h2>
     <p class="muted">ทั้งหมด <?= count($pivot['rows']) ?> รายการ</p>
     <a class="btn" href="export.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดาวน์โหลด CSV (รวมทุกหน่วยงาน)</a>
+    <a class="btn" href="export_tidy.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดาวน์โหลดสำหรับทำ Pivot Table</a>
     <a class="btn btn-secondary" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์เพิ่ม</a>
     <a class="btn btn-secondary" href="uploads_history.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ประวัติการอัปโหลด / ลบไฟล์</a>
   </div>

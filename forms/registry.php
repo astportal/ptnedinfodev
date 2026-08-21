@@ -16,6 +16,11 @@
  *                      and anything else is flagged as needs_review instead of being guessed (see
  *                      Importer::classifyValue). Use 'text' for sheets whose value columns are genuinely
  *                      free text / categorical (names, sizes, types) — no numeric inference is applied.
+ *   value_level_labels : optional. Column headers are stored as one joined path (e.g.
+ *                      "ข้าราชการ / ชาย"); the "tidy" export (for Excel PivotTable) splits that back
+ *                      into separate level columns. This array names those level columns in order
+ *                      (e.g. ['ประเภทบุคลากร', 'เพศ']). Levels beyond the array, or when omitted
+ *                      entirely, are labeled "ระดับที่ N" automatically.
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every header row for that column, joined with " / ". This is what lets the
@@ -37,6 +42,7 @@ return [
                 'identity_cols'   => 3,
                 'identity_fields' => ['agency_name', 'admin_name', 'phone'],
                 'value_type'      => 'numeric', // จำนวนบุคลากรแยกชาย/หญิง
+                'value_level_labels' => ['หมวด', 'ประเภทบุคลากร', 'เพศ'],
             ],
         ],
     ],
@@ -60,6 +66,7 @@ return [
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
                 'value_type'      => 'numeric', // ติ๊ก "/" = เปิดสอน, "-" = ไม่เปิดสอน ในแต่ละระดับชั้น
+                'value_level_labels' => ['หมวด', 'ระดับชั้น'],
             ],
         ],
     ],
@@ -75,6 +82,7 @@ return [
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
                 'value_type'      => 'numeric', // จำนวนห้องเรียนแยกตามระดับชั้น
+                'value_level_labels' => ['ระดับการศึกษา', 'กลุ่มย่อย', 'ชั้นปี'],
             ],
         ],
     ],
