@@ -70,7 +70,7 @@ class Importer
     {
         $sheetName    = $sheetDef['sheet_name'];
         $headerRows   = $sheetDef['header_rows'];
-        $titleRow     = $sheetDef['title_row'] ?? 0;
+        $skipRows     = $sheetDef['skip_rows'] ?? [$sheetDef['title_row'] ?? 0];
         $identityCols = $sheetDef['identity_cols'];
         $identityFields = $sheetDef['identity_fields'];
         $valueType    = $sheetDef['value_type'] ?? 'text';
@@ -80,17 +80,26 @@ class Importer
         $maxCol = $data['maxCol'];
         $maxRow = $data['maxRow'];
 
-        // Build column_path for every value column beyond identity_cols, by joining
-        // the text of every non-title header row (blank/duplicate-adjacent parts skipped).
+        // Build column_path for every value column beyond identity_cols, by joining the text of
+        // every non-skipped header row (blank/duplicate-adjacent parts skipped). Some templates
+        // group header cells visually (leaving the cell blank) without an actual Excel merge, so
+        // a blank header cell also falls back to the last non-blank cell seen so far in that same
+        // row — the same effect a real merge would have had.
         $columnPaths = [];
+        $rowCarry = [];
         for ($c = $identityCols + 1; $c <= $maxCol; $c++) {
             $parts = [];
             $prev = null;
             for ($r = 1; $r <= $headerRows; $r++) {
-                if ($r === $titleRow) {
+                if (in_array($r, $skipRows, true)) {
                     continue;
                 }
                 $text = trim((string)($grid[$r][$c] ?? ''));
+                if ($text === '') {
+                    $text = $rowCarry[$r] ?? '';
+                } else {
+                    $rowCarry[$r] = $text;
+                }
                 if ($text === '' || $text === $prev) {
                     continue;
                 }
