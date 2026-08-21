@@ -60,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
   <nav>
     <a href="index.php">แดชบอร์ด</a>
+    <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>

@@ -49,6 +49,7 @@ class Reporting
         $rows = [];
         foreach ($submissions as $s) {
             $row = [
+                'id'          => $s['id'],
                 'seq_no'      => $s['seq_no'],
                 'school_code' => $s['school_code'],
                 'agency_name' => $s['agency_name'],

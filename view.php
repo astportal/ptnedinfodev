@@ -22,6 +22,14 @@ if (!$sheetDef) {
     die('ไม่พบชีทที่ระบุ');
 }
 
+$flash = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_submission') {
+    $submissionId = (int)($_POST['submission_id'] ?? 0);
+    $stmt = $db->prepare('DELETE FROM submissions WHERE id = :id AND form_key = :fk AND sheet_name = :sn');
+    $stmt->execute(['id' => $submissionId, 'fk' => $formKey, 'sn' => $sheetName]);
+    $flash = 'ลบรายการนี้ออกจากระบบแล้ว';
+}
+
 $reporting = new Reporting($db);
 $pivot = $reporting->pivot($formKey, $sheetName);
 $identityLabels = [
@@ -53,7 +61,10 @@ $identityLabels = [
     <p class="muted">ทั้งหมด <?= count($pivot['rows']) ?> รายการ</p>
     <a class="btn" href="export.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดาวน์โหลด CSV (รวมทุกหน่วยงาน)</a>
     <a class="btn btn-secondary" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์เพิ่ม</a>
+    <a class="btn btn-secondary" href="uploads_history.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ประวัติการอัปโหลด / ลบไฟล์</a>
   </div>
+
+  <?php if ($flash): ?><div class="alert alert-ok"><?= h($flash) ?></div><?php endif; ?>
 
   <div class="card">
     <?php if (!$pivot['rows']): ?>
@@ -69,6 +80,7 @@ $identityLabels = [
               <?php foreach ($pivot['columns'] as $path): ?>
                 <th><?= h($path) ?></th>
               <?php endforeach; ?>
+              <th>จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -80,6 +92,13 @@ $identityLabels = [
                 <?php foreach ($pivot['columns'] as $path): ?>
                   <td><?= h((string)($row[$path] ?? '')) ?></td>
                 <?php endforeach; ?>
+                <td>
+                  <form method="post" onsubmit="return confirm('ยืนยันลบรายการนี้? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0;">
+                    <input type="hidden" name="action" value="delete_submission">
+                    <input type="hidden" name="submission_id" value="<?= (int)$row['id'] ?>">
+                    <button type="submit" class="btn" style="background:#dc2626; padding:4px 10px; font-size:12px;">ลบ</button>
+                  </form>
+                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>
