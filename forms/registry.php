@@ -82,7 +82,7 @@ return [
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'],
                 'value_type'      => 'numeric', // จำนวนห้องเรียนแยกตามระดับชั้น
-                'value_level_labels' => ['ระดับการศึกษา', 'กลุ่มย่อย', 'ชั้นปี'],
+                'value_level_labels' => ['ระดับการศึกษา', 'ชั้นปี'], // ต้นฉบับมี header 3 ระดับ แต่ระดับ 2-3 เป็นข้อความต่อเนื่องกัน ไม่ใช่คนละมิติจริง ๆ จึงรวมเป็นคอลัมน์เดียว
             ],
         ],
     ],

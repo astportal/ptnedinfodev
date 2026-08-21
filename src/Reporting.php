@@ -129,14 +129,23 @@ class Reporting
         $valStmt->execute($ids);
         $values = $valStmt->fetchAll();
 
-        // First pass: split every column_path and find the deepest level used in this sheet,
-        // so every output row has the same fixed set of level columns (required for a clean pivot).
+        // First pass: split every column_path into level columns. When $levelLabels is given,
+        // it also caps how many columns to split into — the source template's header rows don't
+        // always map cleanly one-to-one onto meaningful fields (e.g. a header row that's really a
+        // continuation/footnote of the row above it), so anything past the last named level stays
+        // joined together in that final column instead of spilling into an extra, confusing one.
+        $targetDepth = $levelLabels ? count($levelLabels) : null;
         $splitPaths = [];
         $maxDepth = 1;
         foreach ($values as $v) {
-            $parts = array_map('trim', explode(' / ', $v['column_path']));
+            $parts = $targetDepth
+                ? array_map('trim', explode(' / ', $v['column_path'], $targetDepth))
+                : array_map('trim', explode(' / ', $v['column_path']));
             $splitPaths[$v['column_path']] = $parts;
             $maxDepth = max($maxDepth, count($parts));
+        }
+        if ($targetDepth) {
+            $maxDepth = $targetDepth;
         }
 
         $labels = [];
