@@ -226,7 +226,7 @@ class Importer
      *
      * @return array{0: string, 1: bool} [ค่าที่ใช้บันทึก, ต้องตรวจสอบหรือไม่]
      */
-    private function classifyValue(string $raw): array
+    public static function classifyValue(string $raw): array
     {
         if ($raw === '-') {
             return ['0', false];

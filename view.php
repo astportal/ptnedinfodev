@@ -95,8 +95,9 @@ $identityLabels = [
                   <?php $flagged = !empty($row['_needs_review'][$path]); ?>
                   <td<?= $flagged ? ' style="background:#fee2e2;" title="ต้องตรวจสอบ — ไม่แน่ใจว่าเป็นตัวเลข"' : '' ?>><?= h((string)($row[$path] ?? '')) ?></td>
                 <?php endforeach; ?>
-                <td>
-                  <form method="post" onsubmit="return confirm('ยืนยันลบรายการนี้? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0;">
+                <td style="white-space:nowrap;">
+                  <a class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" href="edit_submission.php?id=<?= (int)$row['id'] ?>">แก้ไข</a>
+                  <form method="post" onsubmit="return confirm('ยืนยันลบรายการนี้? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0; display:inline;">
                     <input type="hidden" name="action" value="delete_submission">
                     <input type="hidden" name="submission_id" value="<?= (int)$row['id'] ?>">
                     <button type="submit" class="btn" style="background:#dc2626; padding:4px 10px; font-size:12px;">ลบ</button>
