@@ -453,6 +453,70 @@ return [
         ],
     ],
 
+    '12_project_schools' => [
+        'form_label'     => 'ตารางที่ 12 ข้อมูลประเภทโรงเรียนโครงการ',
+        'source_file'    => '12_ ข้อมูลประเภทโรงเรียนโครงการ.xlsx',
+        // ทุกชีทเป็นรายชื่อโรงเรียนที่เข้าร่วมโครงการนั้น ๆ ล้วน ๆ (ไม่มีคอลัมน์ตัวเลข) —
+        // แค่ปรากฏอยู่ในชีทก็คือข้อมูลแล้ว (แปลว่าโรงเรียนนั้นเข้าร่วมโครงการ)
+        // หมายเหตุลำดับคอลัมน์: ตำบลมาก่อนอำเภอ ต่างจากฟอร์มอื่นที่อำเภอมาก่อนตำบล
+        'sheets' => array_map(
+            fn($sheetName) => [
+                'sheet_name'      => $sheetName,
+                'skip_rows'       => [1],
+                'header_rows'     => 2,
+                'identity_cols'   => 6,
+                'identity_fields' => ['seq_no', 'school_code', 'agency_name', 'school_name', 'tambon', 'amphoe'],
+                'value_type'      => 'text',
+            ],
+            [
+                '1. พระราชดำริ', '2. โครงการอาหารเช้า', '3.ประชารัฐ', '4.พักนอน', '5.รร กองทุน',
+                '6.รร.ราชประชานุเคราะห์', '7. ขยายโอกาส', '8. ในฝัน', '9.ดีตำบล', '10.พัฒนาคุณภาพ',
+                '11.มาตรฐานสากล', '12.สเต็ม', '13. icu',
+            ]
+        ),
+    ],
+
+    '15_private_nonformal' => [
+        'form_label'     => 'ตารางที่ 15 ข้อมูลโรงเรียนเอกชนนอกระบบ',
+        'source_file'    => '15_ข้อมูลโรงเรียนเอกชนนอกระบบ.xlsx',
+        // หมายเหตุ: ไม่รองรับชีท "สช.วิชาชีพ" (15.4) และ "สช.วิชาชีพ-ครู-นร." (15.5) — ทั้งสอง
+        // ชีทมีแถวที่เป็น "หัวข้อคั่นหมวด" ปนอยู่กับแถวข้อมูลจริง (ไม่ใช่ทุกแถวคือ 1 โรงเรียน)
+        // และไฟล์ต้นฉบับมีข้อมูลตัวอย่างจริงของ จ.ปัตตานีฝังไว้ในแม่แบบ (ไม่ใช่ข้อความ placeholder
+        // ทั่วไป) ทำให้ระบบแยกไม่ออกว่าแถวไหนเป็นตัวอย่างจากแม่แบบหรือข้อมูลจริงที่กรอกมา
+        'sheets' => [
+            [
+                'sheet_name'      => '15.1',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 4,
+                'identity_cols'   => 10,
+                'identity_fields' => ['school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'license_holder', 'manager_name', 'headmaster_name'],
+                'value_type'      => 'numeric', // จำนวนผู้สอน/ผู้เรียน แยกตามเพศ
+                'value_label'     => 'รายการ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '15.2',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 4,
+                'identity_cols'   => 10,
+                'identity_fields' => ['seq_no', 'school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'headmaster_name', 'institution_size'],
+                'value_type'      => 'numeric', // จำนวนโต๊ะครู/ผู้เรียน แยกตามเพศ
+                'value_label'     => 'รายการ',
+                'value_split_last' => 'เพศ',
+            ],
+            [
+                'sheet_name'      => '15.3',
+                'skip_rows'       => [1, 2],
+                'header_rows'     => 4,
+                'identity_cols'   => 10,
+                'identity_fields' => ['seq_no', 'school_code', 'school_name', 'address', 'tambon', 'amphoe', 'zipcode', 'phone', 'manager_name', 'institution_size'],
+                'value_type'      => 'numeric', // จำนวนผู้สอน/ผู้เรียน แยกตามเพศ
+                'value_label'     => 'รายการ',
+                'value_split_last' => 'เพศ',
+            ],
+        ],
+    ],
+
     // หมายเหตุ: ยังไม่รองรับไฟล์ 13_จำนวนนักเรียนแยกรายชั้น.xlsx — ชีทนั้นเป็นตารางไขว้ 2 มิติ
     // (แถว = ช่วงอายุของหน่วยงานนั้น, คอลัมน์ = ชั้น+เพศ) กรอกหลายแถวต่อหน่วยงานเดียว
     // ไม่ใช่ 1 แถวต่อสถานศึกษาแบบชีทอื่น ต้องออกแบบแยกต่างหากเหมือน "9.สรุป"
