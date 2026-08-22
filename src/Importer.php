@@ -22,6 +22,19 @@ class Importer
         $results = [];
         $totalRows = 0;
 
+        // The original blank template for this form, used to check the uploaded file's column
+        // structure hasn't drifted (columns inserted/deleted/reordered) before importing anything.
+        // One reader per form, reused across all of that form's sheets.
+        $referenceReader = null;
+        $referencePath = __DIR__ . '/../reference_templates/' . ($formDef['source_file'] ?? '');
+        if (isset($formDef['source_file']) && is_file($referencePath)) {
+            try {
+                $referenceReader = new XlsxReader($referencePath);
+            } catch (Throwable $e) {
+                $referenceReader = null; // don't let a broken reference file block real uploads
+            }
+        }
+
         foreach ($formDef['sheets'] as $sheetDef) {
             $sheetName = $sheetDef['sheet_name'];
             if (!in_array($sheetName, $reader->sheetNames(), true)) {
@@ -35,7 +48,7 @@ class Importer
             }
 
             try {
-                $sheetResult = $this->importSheet($reader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
+                $sheetResult = $this->importSheet($reader, $referenceReader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
                 $rowCount = $sheetResult['rows'];
                 $needsReview = $sheetResult['needs_review'];
                 $message = "นำเข้าสำเร็จ {$rowCount} แถว";
@@ -70,7 +83,7 @@ class Importer
     /**
      * @return array{rows: int, needs_review: int, hidden_rows: int, hidden_cols: int}
      */
-    private function importSheet(XlsxReader $reader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
+    private function importSheet(XlsxReader $reader, ?XlsxReader $referenceReader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
     {
         $sheetName    = $sheetDef['sheet_name'];
         $headerRows   = $sheetDef['header_rows'];
@@ -86,50 +99,21 @@ class Importer
         $hiddenRows = $data['hiddenRows'];
         $hiddenCols = $data['hiddenCols'];
 
-        // Build column_path for every value column beyond identity_cols, by joining the text of
-        // every non-skipped header row (blank/duplicate-adjacent parts skipped). Some templates
-        // group header cells visually (leaving the cell blank) without an actual Excel merge, so
-        // a blank header cell falls back to the same row's value in the PREVIOUS column — the same
-        // effect a real merge would have had. That inheritance only holds while every shallower row
-        // still matches the previous column too ("still inside the same group"); the moment a
-        // shallower row diverges, inheritance stops for the rest of this column, so a blank cell
-        // right after an unrelated single-column group (e.g. a "รวม" total column) doesn't
-        // accidentally inherit that group's label instead of being left blank.
-        //
-        // Columns hidden in the source file are skipped entirely (never added to $columnPaths),
-        // so whatever data is in them is never imported — same treatment as hidden rows below.
-        $columnPaths = [];
-        $prevRowTexts = [];
+        // column_path for every value column beyond identity_cols, built from the full header —
+        // hidden columns are included here (structure is compared against the reference template
+        // regardless of visibility); which columns get skipped when actually importing DATA is a
+        // separate decision made further down, in the value-insert loop.
+        $columnPaths = $this->buildColumnPaths($grid, $maxCol, $identityCols, $headerRows, $skipRows);
+
+        if ($referenceReader !== null && in_array($sheetName, $referenceReader->sheetNames(), true)) {
+            $this->assertStructureMatches($referenceReader, $sheetName, $identityCols, $headerRows, $skipRows, $columnPaths);
+        }
+
         $hiddenColsSkipped = 0;
-        for ($c = $identityCols + 1; $c <= $maxCol; $c++) {
+        foreach (array_keys($columnPaths) as $c) {
             if (isset($hiddenCols[$c])) {
                 $hiddenColsSkipped++;
-                continue;
             }
-            $parts = [];
-            $prev = null;
-            $curRowTexts = [];
-            $scopeBroken = false;
-            for ($r = 1; $r <= $headerRows; $r++) {
-                if (in_array($r, $skipRows, true)) {
-                    continue;
-                }
-                $text = trim((string)($grid[$r][$c] ?? ''));
-                if ($text === '' && !$scopeBroken) {
-                    $text = $prevRowTexts[$r] ?? '';
-                }
-                if (($prevRowTexts[$r] ?? null) !== $text) {
-                    $scopeBroken = true;
-                }
-                $curRowTexts[$r] = $text;
-                if ($text === '' || $text === $prev) {
-                    continue;
-                }
-                $parts[] = $text;
-                $prev = $text;
-            }
-            $prevRowTexts = $curRowTexts;
-            $columnPaths[$c] = $parts ? implode(' / ', $parts) : "คอลัมน์ที่ " . $c;
         }
 
         // Record this upload first.
@@ -232,6 +216,9 @@ class Importer
                      VALUES (:sid, :ci, :cp, :val, :nr)'
                 );
                 foreach ($columnPaths as $c => $path) {
+                    if (isset($hiddenCols[$c])) {
+                        continue; // hidden column — never imported, even though it exists in the sheet
+                    }
                     $raw = trim((string)($rowData[$c] ?? ''));
                     if ($raw === '') {
                         continue;
@@ -266,6 +253,84 @@ class Importer
             'hidden_rows'  => $hiddenRowsSkipped,
             'hidden_cols'  => $hiddenColsSkipped,
         ];
+    }
+
+    /**
+     * Join every non-skipped header row's text for each value column (beyond identity_cols) into
+     * one column_path, the same way for both the uploaded file and the reference template so the
+     * two are directly comparable. A header cell left blank to visually group with its neighbour
+     * (with or without an actual Excel merge) inherits the last non-blank text seen in that same
+     * header row, but only while every shallower row still matches the previous column too — the
+     * moment a shallower row diverges, inheritance stops for the rest of that column.
+     *
+     * @return array<int,string> col_index => column_path
+     */
+    private function buildColumnPaths(array $grid, int $maxCol, int $identityCols, int $headerRows, array $skipRows): array
+    {
+        $columnPaths = [];
+        $prevRowTexts = [];
+        for ($c = $identityCols + 1; $c <= $maxCol; $c++) {
+            $parts = [];
+            $prev = null;
+            $curRowTexts = [];
+            $scopeBroken = false;
+            for ($r = 1; $r <= $headerRows; $r++) {
+                if (in_array($r, $skipRows, true)) {
+                    continue;
+                }
+                $text = trim((string)($grid[$r][$c] ?? ''));
+                if ($text === '' && !$scopeBroken) {
+                    $text = $prevRowTexts[$r] ?? '';
+                }
+                if (($prevRowTexts[$r] ?? null) !== $text) {
+                    $scopeBroken = true;
+                }
+                $curRowTexts[$r] = $text;
+                if ($text === '' || $text === $prev) {
+                    continue;
+                }
+                $parts[] = $text;
+                $prev = $text;
+            }
+            $prevRowTexts = $curRowTexts;
+            $columnPaths[$c] = $parts ? implode(' / ', $parts) : "คอลัมน์ที่ " . $c;
+        }
+        return $columnPaths;
+    }
+
+    /**
+     * Compare the uploaded file's column structure for this sheet against the original blank
+     * template — same column count and same header text per column — so a column inserted,
+     * deleted, or reordered before the agency sent the file back gets caught with a clear error
+     * instead of silently landing data in the wrong column.
+     */
+    private function assertStructureMatches(XlsxReader $referenceReader, string $sheetName, int $identityCols, int $headerRows, array $skipRows, array $uploadedPaths): void
+    {
+        $refData = $referenceReader->readGrid($sheetName);
+        $refPaths = $this->buildColumnPaths($refData['grid'], $refData['maxCol'], $identityCols, $headerRows, $skipRows);
+
+        $normalize = static fn(string $s): string => preg_replace('/\s+/u', ' ', trim($s));
+
+        $refCount = count($refPaths);
+        $uploadedCount = count($uploadedPaths);
+        if ($refCount !== $uploadedCount) {
+            throw new RuntimeException(
+                "โครงสร้างคอลัมน์ในชีท \"$sheetName\" ไม่ตรงกับแบบฟอร์มต้นฉบับ: ต้นฉบับมี $refCount คอลัมน์ "
+                . "แต่ไฟล์นี้มี $uploadedCount คอลัมน์ — อาจมีการเพิ่ม/ลบ/แทรกคอลัมน์ กรุณาแก้ไขให้ตรงกับแบบฟอร์มต้นฉบับแล้วอัปโหลดใหม่"
+            );
+        }
+
+        $refList = array_values($refPaths);
+        $uploadedList = array_values($uploadedPaths);
+        foreach ($refList as $i => $expected) {
+            $actual = $uploadedList[$i] ?? '';
+            if ($normalize($expected) !== $normalize($actual)) {
+                throw new RuntimeException(
+                    "โครงสร้างคอลัมน์ในชีท \"$sheetName\" ไม่ตรงกับแบบฟอร์มต้นฉบับ: คอลัมน์ที่ " . ($identityCols + $i + 1)
+                    . " ต้นฉบับคือ \"$expected\" แต่ไฟล์นี้เป็น \"$actual\" — กรุณาแก้ไขให้ตรงกับแบบฟอร์มต้นฉบับแล้วอัปโหลดใหม่"
+                );
+            }
+        }
     }
 
     /**
