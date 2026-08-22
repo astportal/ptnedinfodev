@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="badge badge-err">ผิดพลาด</span>
               <?php endif; ?>
             </td>
-            <td><?= h($r['message']) ?></td>
+            <td style="white-space: normal;"><?= h($r['message']) ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
