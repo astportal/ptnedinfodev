@@ -6,6 +6,7 @@ $db = Db::conn();
 $forms = form_registry();
 $formKey = $_GET['form'] ?? '';
 $sheetName = $_GET['sheet'] ?? '';
+$yearFilter = $_GET['year'] ?? '';
 
 $flash = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_upload') {
@@ -37,10 +38,31 @@ if ($sheetName !== '') {
     $sql .= ' AND u.sheet_name = :sn';
     $params['sn'] = $sheetName;
 }
+// academic_year only exists after migrations/004_academic_year.sql is applied.
+$yearFilterAvailable = true;
+if ($yearFilter !== '') {
+    $sql .= ' AND u.academic_year = :yr';
+    $params['yr'] = (int)$yearFilter;
+}
 $sql .= ' ORDER BY u.uploaded_at DESC';
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$uploads = $stmt->fetchAll();
+try {
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $uploads = $stmt->fetchAll();
+} catch (Throwable $e) {
+    // migration not applied yet — retry once without the year filter/column
+    $yearFilterAvailable = false;
+    unset($params['yr']);
+    $sql = str_replace(' AND u.academic_year = :yr', '', $sql);
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $uploads = $stmt->fetchAll();
+}
+
+$availableYears = [];
+if ($yearFilterAvailable) {
+    $availableYears = $db->query('SELECT DISTINCT academic_year FROM uploads ORDER BY academic_year DESC')->fetchAll(PDO::FETCH_COLUMN);
+}
 
 // Group sheets that came from the same file upload event together
 // (see delete_upload_batch handler above for why stored_filename is the key).
@@ -82,6 +104,7 @@ function form_label_for(array $forms, string $key): string
     <a href="index.php">แดชบอร์ด</a>
     <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="schools_master.php">ทำเนียบโรงเรียน</a>
+    <a href="settings.php">ตั้งค่า</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>
@@ -104,6 +127,17 @@ function form_label_for(array $forms, string $key): string
           <?php endforeach; ?>
         </select>
       </div>
+      <?php if ($yearFilterAvailable && $availableYears): ?>
+        <div class="field" style="margin-bottom:0; max-width:200px;">
+          <label>กรองตามปีการศึกษา</label>
+          <select name="year" onchange="this.form.submit()">
+            <option value="">— ทั้งหมด —</option>
+            <?php foreach ($availableYears as $y): ?>
+              <option value="<?= h((string)$y) ?>" <?= $yearFilter === (string)$y ? 'selected' : '' ?>><?= h((string)$y) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      <?php endif; ?>
     </form>
   </div>
 
@@ -114,13 +148,14 @@ function form_label_for(array $forms, string $key): string
       <div class="table-scroll">
         <table style="table-layout: fixed;">
           <colgroup>
-            <col style="width: 12%;">
-            <col style="width: 16%;">
-            <col style="width: 14%;">
-            <col style="width: 14%;">
+            <col style="width: 11%;">
+            <col style="width: 15%;">
+            <col style="width: 13%;">
+            <col style="width: 13%;">
+            <?php if ($yearFilterAvailable): ?><col style="width: 7%;"><?php endif; ?>
+            <col style="width: 6%;">
             <col style="width: 7%;">
-            <col style="width: 8%;">
-            <col style="width: 10%;">
+            <col style="width: 9%;">
             <col style="width: 19%;">
           </colgroup>
           <thead>
@@ -129,6 +164,7 @@ function form_label_for(array $forms, string $key): string
               <th>ฟอร์ม</th>
               <th>ชีท</th>
               <th>ชื่อไฟล์เดิม</th>
+              <?php if ($yearFilterAvailable): ?><th>ปีการศึกษา</th><?php endif; ?>
               <th>จำนวนแถว</th>
               <th>สถานะ</th>
               <th>อัปโหลดโดย</th>
@@ -146,6 +182,9 @@ function form_label_for(array $forms, string $key): string
                 <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h(form_label_for($forms, $u['form_key'])) ?></td>
                 <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['sheet_name']) ?></td>
                 <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['original_filename']) ?></td>
+                <?php if ($yearFilterAvailable): ?>
+                  <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h((string)$u['academic_year']) ?></td>
+                <?php endif; ?>
                 <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h((string)$u['row_count']) ?></td>
                 <td<?= $isFirstOfGroup ? $groupBorder : '' ?>>
                   <?php if ($u['status'] === 'parsed'): ?>

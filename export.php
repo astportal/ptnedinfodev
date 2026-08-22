@@ -11,8 +11,12 @@ if (!isset($forms[$formKey])) {
     die('ไม่พบฟอร์มที่ระบุ');
 }
 
+$selectedYear = $_GET['year'] ?? 'all';
+$showAllYears = $selectedYear === 'all';
+$selectedYearInt = $showAllYears ? null : (int)$selectedYear;
+
 $reporting = new Reporting($db);
-$pivot = $reporting->pivot($formKey, $sheetName);
+$pivot = $reporting->pivot($formKey, $sheetName, $selectedYearInt);
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
     'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล',
@@ -27,11 +31,15 @@ $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel opens Thai text correctly
 
 $extraLabels = array_map('extra_identity_label', $pivot['extra_identity_fields']);
-$header = array_merge(array_values($identityLabels), $extraLabels, array_values($pivot['columns']));
+$yearHeader = $showAllYears ? ['ปีการศึกษา'] : [];
+$header = array_merge($yearHeader, array_values($identityLabels), $extraLabels, array_values($pivot['columns']));
 fputcsv($out, $header);
 
 foreach ($pivot['rows'] as $row) {
     $line = [];
+    if ($showAllYears) {
+        $line[] = $row['academic_year'] ?? '';
+    }
     foreach (array_keys($identityLabels) as $key) {
         $line[] = $row[$key] ?? '';
     }
@@ -45,7 +53,7 @@ foreach ($pivot['rows'] as $row) {
 }
 
 if ($pivot['rows']) {
-    $totalLine = ['รวมทั้งหมด'];
+    $totalLine = $showAllYears ? ['รวมทั้งหมด', ''] : ['รวมทั้งหมด'];
     foreach (array_slice(array_keys($identityLabels), 1) as $key) {
         $totalLine[] = '';
     }

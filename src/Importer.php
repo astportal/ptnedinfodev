@@ -9,37 +9,39 @@ require_once __DIR__ . '/XlsxReader.php';
  */
 class Importer
 {
-    /** @var array<string,true>|null null = not loaded yet */
-    private ?array $knownSchoolCodes = null;
+    /** @var array<int,array<string,true>> academic_year => known school codes for that year */
+    private array $knownSchoolCodesByYear = [];
 
     public function __construct(private PDO $db)
     {
     }
 
     /**
-     * Reference school codes uploaded via schools_master.php, cached for the lifetime of this
-     * Importer instance. Returns an empty array (validation effectively off) if the admin hasn't
-     * uploaded a roster yet — checking against an empty roster would flag every single code as
-     * unknown, which is worse than not checking at all.
+     * Reference school codes for one academic year, uploaded via schools_master.php — cached per
+     * year for the lifetime of this Importer instance. Returns an empty array (validation
+     * effectively off) if the admin hasn't uploaded that year's roster yet — checking against an
+     * empty roster would flag every single code as unknown, which is worse than not checking.
      */
-    private function knownSchoolCodes(): array
+    private function knownSchoolCodes(int $academicYear): array
     {
-        if ($this->knownSchoolCodes === null) {
+        if (!array_key_exists($academicYear, $this->knownSchoolCodesByYear)) {
             try {
-                $codes = $this->db->query('SELECT school_code FROM schools_master')->fetchAll(PDO::FETCH_COLUMN);
-                $this->knownSchoolCodes = array_fill_keys($codes, true);
+                $stmt = $this->db->prepare('SELECT school_code FROM schools_master WHERE academic_year = :y');
+                $stmt->execute(['y' => $academicYear]);
+                $codes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $this->knownSchoolCodesByYear[$academicYear] = array_fill_keys($codes, true);
             } catch (Throwable $e) {
                 // schools_master table not migrated in yet — treat as "validation not set up".
-                $this->knownSchoolCodes = [];
+                $this->knownSchoolCodesByYear[$academicYear] = [];
             }
         }
-        return $this->knownSchoolCodes;
+        return $this->knownSchoolCodesByYear[$academicYear];
     }
 
     /**
      * @return array{uploads: array, total_rows: int}
      */
-    public function importFile(string $formKey, array $formDef, string $filePath, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
+    public function importFile(string $formKey, array $formDef, string $filePath, string $originalFilename, string $storedFilename, ?int $uploadedBy, int $academicYear): array
     {
         $reader = new XlsxReader($filePath);
         $results = [];
@@ -86,7 +88,7 @@ class Importer
             $referenceReader = $sourceFile !== null ? $referenceReaders[$sourceFile] : null;
 
             try {
-                $sheetResult = $this->importSheet($reader, $referenceReader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
+                $sheetResult = $this->importSheet($reader, $referenceReader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy, $academicYear);
                 $rowCount = $sheetResult['rows'];
                 $needsReview = $sheetResult['needs_review'];
                 $message = "นำเข้าสำเร็จ {$rowCount} แถว";
@@ -125,7 +127,7 @@ class Importer
     /**
      * @return array{rows: int, needs_review: int, hidden_rows: int, hidden_cols: int}
      */
-    private function importSheet(XlsxReader $reader, ?XlsxReader $referenceReader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
+    private function importSheet(XlsxReader $reader, ?XlsxReader $referenceReader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy, int $academicYear): array
     {
         $sheetName    = $sheetDef['sheet_name'];
         // Normally the same as $sheetName; differs only for a merged form (e.g. 14ก+14ข) where
@@ -164,12 +166,13 @@ class Importer
 
         // Record this upload first.
         $stmt = $this->db->prepare(
-            'INSERT INTO uploads (form_key, sheet_name, original_filename, stored_filename, uploaded_by, status)
-             VALUES (:form_key, :sheet_name, :original_filename, :stored_filename, :uploaded_by, :status)'
+            'INSERT INTO uploads (form_key, sheet_name, academic_year, original_filename, stored_filename, uploaded_by, status)
+             VALUES (:form_key, :sheet_name, :academic_year, :original_filename, :stored_filename, :uploaded_by, :status)'
         );
         $stmt->execute([
             'form_key'          => $formKey,
             'sheet_name'        => $storageSheetName,
+            'academic_year'     => $academicYear,
             'original_filename' => $originalFilename,
             'stored_filename'   => $storedFilename,
             'uploaded_by'       => $uploadedBy,
@@ -244,10 +247,11 @@ class Importer
                 // sheets that actually have a school_code identity column, and only once the admin
                 // has uploaded a roster (see knownSchoolCodes() for why an empty roster skips this).
                 $schoolCodeIssue = null;
-                if (in_array('school_code', $identityFields, true) && $this->knownSchoolCodes()) {
+                $yearKnownCodes = $this->knownSchoolCodes($academicYear);
+                if (in_array('school_code', $identityFields, true) && $yearKnownCodes) {
                     if (($standard['school_code'] ?? null) === null) {
                         $schoolCodeIssue = 'missing';
-                    } elseif (!isset($this->knownSchoolCodes()[$standard['school_code']])) {
+                    } elseif (!isset($yearKnownCodes[$standard['school_code']])) {
                         $schoolCodeIssue = 'not_found';
                     }
                 }
@@ -255,23 +259,26 @@ class Importer
                     $schoolCodeIssueCount++;
                 }
 
-                // Upsert key: same form+sheet+school_code, or — when there's no school_code —
-                // the same agency_name + school_name + extra_identity together (NULL-safe), so
-                // multiple rows that share an agency (e.g. several centers under one อปท., or
-                // several age-bracket rows for one agency) don't overwrite each other; re-imports
-                // still replace the previous submission for that same exact entity.
-                $this->deleteExistingSubmission($formKey, $storageSheetName, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
+                // Upsert key: same form+sheet+academic_year+school_code, or — when there's no
+                // school_code — the same agency_name + school_name + extra_identity together
+                // (NULL-safe), so multiple rows that share an agency (e.g. several centers under
+                // one อปท., or several age-bracket rows for one agency) don't overwrite each
+                // other; re-imports still replace the previous submission for that same exact
+                // entity, but a different academic_year is always a separate submission — data
+                // from past years is never touched by uploading a new year's file.
+                $this->deleteExistingSubmission($formKey, $storageSheetName, $academicYear, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
 
                 $ins = $this->db->prepare(
                     'INSERT INTO submissions
-                        (upload_id, form_key, sheet_name, row_seq, seq_no, school_code, school_code_issue, agency_name, school_name, amphoe, tambon, extra_identity)
+                        (upload_id, form_key, sheet_name, academic_year, row_seq, seq_no, school_code, school_code_issue, agency_name, school_name, amphoe, tambon, extra_identity)
                      VALUES
-                        (:upload_id, :form_key, :sheet_name, :row_seq, :seq_no, :school_code, :school_code_issue, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
+                        (:upload_id, :form_key, :sheet_name, :academic_year, :row_seq, :seq_no, :school_code, :school_code_issue, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
                 );
                 $ins->execute([
                     'upload_id'         => $uploadId,
                     'form_key'          => $formKey,
                     'sheet_name'        => $storageSheetName,
+                    'academic_year'     => $academicYear,
                     'row_seq'           => $r,
                     'seq_no'            => $standard['seq_no'],
                     'school_code'       => $standard['school_code'],
@@ -432,23 +439,23 @@ class Importer
         return [$raw, true];
     }
 
-    private function deleteExistingSubmission(string $formKey, string $sheetName, ?string $schoolCode, ?string $agencyName, ?string $schoolName, ?string $extraJson): void
+    private function deleteExistingSubmission(string $formKey, string $sheetName, int $academicYear, ?string $schoolCode, ?string $agencyName, ?string $schoolName, ?string $extraJson): void
     {
         if ($schoolCode) {
             $del = $this->db->prepare(
-                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND school_code = :sc'
+                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND academic_year = :yr AND school_code = :sc'
             );
-            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'sc' => $schoolCode]);
+            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'sc' => $schoolCode]);
         } elseif ($agencyName) {
             // NULL-safe equality (<=>) so this still matches correctly when school_name/extra_identity
             // are legitimately absent for this sheet, without falsely matching a different sub-row
             // (different school under the same agency, or a different extra_identity combination)
             // that just happens to share the same agency_name.
             $del = $this->db->prepare(
-                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND school_code IS NULL
+                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND academic_year = :yr AND school_code IS NULL
                  AND agency_name <=> :an AND school_name <=> :snm AND extra_identity <=> :ei'
             );
-            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'an' => $agencyName, 'snm' => $schoolName, 'ei' => $extraJson]);
+            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'an' => $agencyName, 'snm' => $schoolName, 'ei' => $extraJson]);
         }
     }
 

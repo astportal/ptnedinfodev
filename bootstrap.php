@@ -9,6 +9,7 @@ if (!file_exists(__DIR__ . '/config.php')) {
 }
 
 require_once __DIR__ . '/src/Db.php';
+require_once __DIR__ . '/src/Settings.php';
 require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/XlsxReader.php';
 require_once __DIR__ . '/src/Importer.php';

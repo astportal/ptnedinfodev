@@ -26,8 +26,12 @@ if (!$sheetDef) {
     die('ไม่พบชีทที่ระบุ');
 }
 
+$selectedYear = $_GET['year'] ?? 'all';
+$showAllYears = $selectedYear === 'all';
+$selectedYearInt = $showAllYears ? null : (int)$selectedYear;
+
 $reporting = new Reporting($db);
-$tidy = $reporting->tidyRows($formKey, $sheetName, $sheetDef['value_label'] ?? 'รายการ', $sheetDef['value_split_last'] ?? null);
+$tidy = $reporting->tidyRows($formKey, $sheetName, $sheetDef['value_label'] ?? 'รายการ', $sheetDef['value_split_last'] ?? null, $selectedYearInt);
 
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
@@ -47,11 +51,15 @@ if ($tidy['split_label']) {
     $valueCols[] = $tidy['split_label'];
 }
 $extraLabels = array_map('extra_identity_label', $tidy['extra_identity_fields']);
-$header = array_merge(array_values($identityLabels), $extraLabels, $valueCols, ['ค่า', 'ต้องตรวจสอบ']);
+$yearHeader = $showAllYears ? ['ปีการศึกษา'] : [];
+$header = array_merge($yearHeader, array_values($identityLabels), $extraLabels, $valueCols, ['ค่า', 'ต้องตรวจสอบ']);
 fputcsv($out, $header);
 
 foreach ($tidy['rows'] as $row) {
     $line = [];
+    if ($showAllYears) {
+        $line[] = $row['academic_year'] ?? '';
+    }
     foreach (array_keys($identityLabels) as $key) {
         $line[] = $row[$key] ?? '';
     }

@@ -30,8 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     $flash = 'ลบรายการนี้ออกจากระบบแล้ว';
 }
 
+// academic_year only exists after migrations/004_academic_year.sql is applied.
+try {
+    $yearStmt = $db->prepare('SELECT DISTINCT academic_year FROM submissions WHERE form_key = :fk AND sheet_name = :sn ORDER BY academic_year DESC');
+    $yearStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+    $availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
+    $yearFilterAvailable = true;
+} catch (Throwable $e) {
+    $availableYears = [];
+    $yearFilterAvailable = false;
+}
+$selectedYear = $_GET['year'] ?? 'all';
+$showAllYears = !$yearFilterAvailable || $selectedYear === 'all';
+$selectedYearInt = $showAllYears ? null : (int)$selectedYear;
+
 $reporting = new Reporting($db);
-$pivot = $reporting->pivot($formKey, $sheetName);
+$pivot = $reporting->pivot($formKey, $sheetName, $selectedYearInt);
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
     'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล',
@@ -59,9 +73,24 @@ $identityLabels = [
   <div class="card">
     <h1><?= h($formDef['form_label']) ?></h1>
     <h2 class="muted" style="font-weight:400;"><?= h($sheetName) ?></h2>
+    <?php if ($yearFilterAvailable && $availableYears): ?>
+      <form method="get" style="display:flex; gap:12px; align-items:flex-end; margin:12px 0;">
+        <input type="hidden" name="form" value="<?= h($formKey) ?>">
+        <input type="hidden" name="sheet" value="<?= h($sheetName) ?>">
+        <div class="field" style="margin-bottom:0; max-width:220px;">
+          <label>ปีการศึกษา</label>
+          <select name="year" onchange="this.form.submit()">
+            <?php foreach ($availableYears as $y): ?>
+              <option value="<?= h((string)$y) ?>" <?= !$showAllYears && $selectedYearInt === (int)$y ? 'selected' : '' ?>><?= h((string)$y) ?></option>
+            <?php endforeach; ?>
+            <option value="all" <?= $showAllYears ? 'selected' : '' ?>>— ทุกปีรวมกัน —</option>
+          </select>
+        </div>
+      </form>
+    <?php endif; ?>
     <p class="muted">ทั้งหมด <?= count($pivot['rows']) ?> รายการ</p>
-    <a class="btn" href="export.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดาวน์โหลด CSV (รวมทุกหน่วยงาน)</a>
-    <a class="btn" href="export_tidy.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดาวน์โหลดสำหรับทำ Pivot Table</a>
+    <a class="btn" href="export.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>&year=<?= urlencode((string)$selectedYear) ?>">ดาวน์โหลด CSV (รวมทุกหน่วยงาน)</a>
+    <a class="btn" href="export_tidy.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>&year=<?= urlencode((string)$selectedYear) ?>">ดาวน์โหลดสำหรับทำ Pivot Table</a>
     <a class="btn btn-secondary" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์เพิ่ม</a>
     <a class="btn btn-secondary" href="uploads_history.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ประวัติการอัปโหลด / ลบไฟล์</a>
   </div>
@@ -76,6 +105,9 @@ $identityLabels = [
         <table>
           <thead>
             <tr>
+              <?php if ($showAllYears): ?>
+                <th>ปีการศึกษา</th>
+              <?php endif; ?>
               <?php foreach ($identityLabels as $key => $label): ?>
                 <th><?= h($label) ?></th>
               <?php endforeach; ?>
@@ -91,6 +123,9 @@ $identityLabels = [
           <tbody>
             <?php foreach ($pivot['rows'] as $row): ?>
               <tr>
+                <?php if ($showAllYears): ?>
+                  <td><?= h((string)($row['academic_year'] ?? '')) ?></td>
+                <?php endif; ?>
                 <?php foreach (array_keys($identityLabels) as $key): ?>
                   <td><?= h((string)($row[$key] ?? '')) ?></td>
                 <?php endforeach; ?>
@@ -115,6 +150,9 @@ $identityLabels = [
           <tfoot>
             <tr style="font-weight:700; background:#f3f4f6;">
               <td>รวมทั้งหมด</td>
+              <?php if ($showAllYears): ?>
+                <td></td>
+              <?php endif; ?>
               <?php for ($i = 1; $i < count($identityLabels); $i++): ?>
                 <td></td>
               <?php endfor; ?>

@@ -18,15 +18,19 @@ class Reporting
      *   rows: each row has identity fields (standard + extra) + one entry per column_path
      *   totals: column_path => sum of all numeric values in that column (blank if the column has no numeric values)
      */
-    public function pivot(string $formKey, string $sheetName): array
+    public function pivot(string $formKey, string $sheetName, ?int $academicYear = null): array
     {
-        $subStmt = $this->db->prepare(
-            'SELECT id, row_seq, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity
-             FROM submissions
-             WHERE form_key = :fk AND sheet_name = :sn
-             ORDER BY agency_name, school_name, id'
-        );
-        $subStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+        $sql = 'SELECT id, row_seq, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity, academic_year
+                FROM submissions
+                WHERE form_key = :fk AND sheet_name = :sn';
+        $params = ['fk' => $formKey, 'sn' => $sheetName];
+        if ($academicYear !== null) {
+            $sql .= ' AND academic_year = :yr';
+            $params['yr'] = $academicYear;
+        }
+        $sql .= ' ORDER BY agency_name, school_name, id';
+        $subStmt = $this->db->prepare($sql);
+        $subStmt->execute($params);
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
@@ -62,13 +66,14 @@ class Reporting
             }
 
             $row = [
-                'id'          => $s['id'],
-                'seq_no'      => $s['seq_no'],
-                'school_code' => $s['school_code'],
-                'agency_name' => $s['agency_name'],
-                'school_name' => $s['school_name'],
-                'amphoe'      => $s['amphoe'],
-                'tambon'      => $s['tambon'],
+                'id'            => $s['id'],
+                'seq_no'        => $s['seq_no'],
+                'school_code'   => $s['school_code'],
+                'agency_name'   => $s['agency_name'],
+                'school_name'   => $s['school_name'],
+                'amphoe'        => $s['amphoe'],
+                'tambon'        => $s['tambon'],
+                'academic_year' => $s['academic_year'],
                 '_needs_review' => [],
             ];
             foreach ($extra as $field => $val) {
@@ -120,15 +125,19 @@ class Reporting
      *                     dimension like gender, which reads better as its own PivotTable field.
      * @return array{value_label: string, split_label: ?string, extra_identity_fields: string[], rows: array<int, array<string,mixed>>}
      */
-    public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ', ?string $splitLastLabel = null): array
+    public function tidyRows(string $formKey, string $sheetName, string $valueLabel = 'รายการ', ?string $splitLastLabel = null, ?int $academicYear = null): array
     {
-        $subStmt = $this->db->prepare(
-            'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity
-             FROM submissions
-             WHERE form_key = :fk AND sheet_name = :sn
-             ORDER BY agency_name, school_name, id'
-        );
-        $subStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
+        $sql = 'SELECT id, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity, academic_year
+                FROM submissions
+                WHERE form_key = :fk AND sheet_name = :sn';
+        $params = ['fk' => $formKey, 'sn' => $sheetName];
+        if ($academicYear !== null) {
+            $sql .= ' AND academic_year = :yr';
+            $params['yr'] = $academicYear;
+        }
+        $sql .= ' ORDER BY agency_name, school_name, id';
+        $subStmt = $this->db->prepare($sql);
+        $subStmt->execute($params);
         $submissions = $subStmt->fetchAll();
 
         if (!$submissions) {
@@ -224,12 +233,13 @@ class Reporting
             }
             $s = $byId[$v['submission_id']];
             $row = [
-                'seq_no'      => $s['seq_no'],
-                'school_code' => $s['school_code'],
-                'agency_name' => $s['agency_name'],
-                'school_name' => $s['school_name'],
-                'amphoe'      => $s['amphoe'],
-                'tambon'      => $s['tambon'],
+                'seq_no'        => $s['seq_no'],
+                'school_code'   => $s['school_code'],
+                'agency_name'   => $s['agency_name'],
+                'school_name'   => $s['school_name'],
+                'amphoe'        => $s['amphoe'],
+                'tambon'        => $s['tambon'],
+                'academic_year' => $s['academic_year'],
             ];
             foreach ($extraById[$v['submission_id']] as $field => $val) {
                 $row[$field] = $val;

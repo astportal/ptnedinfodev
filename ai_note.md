@@ -93,14 +93,18 @@
   `view.php` (ดู/ลบ/แก้ไขรายแถว), `edit_submission.php`, `uploads_history.php`,
   `review.php` (ค่าที่ต้องตรวจสอบ), `export.php`/`export_tidy.php`
 
-### DB schema (ดูรายละเอียดเต็มใน `migrations/schema.sql` และ `migrations/002_needs_review.sql`)
+### DB schema (ดูรายละเอียดเต็มใน `migrations/schema.sql`, `002_needs_review.sql`,
+`003_school_code_check.sql`, `004_academic_year.sql` — ต้องรันตามลำดับเลข ทุกไฟล์)
 เก็บข้อมูลแบบ **generic key-value** ไม่ใช่ 1 ตารางต่อ 1 ฟอร์ม:
-* `uploads` — ไฟล์ที่อัปโหลดแต่ละครั้ง
-* `submissions` — 1 แถว = 1 หน่วยงาน/สถานศึกษาต่อฟอร์ม/ชีท มีฟิลด์มาตรฐาน (seq_no, school_code,
-  agency_name, school_name, amphoe, tambon) + `extra_identity` (JSON) สำหรับฟิลด์ที่ไม่เข้าชุด
-  มาตรฐาน (เช่น "age_group" ของฟอร์ม 13, "center_type" ของฟอร์ม 14ก/14ข) — ค่าพวกนี้จะไม่โผล่เป็น
-  คอลัมน์จริงในตาราง แต่ `Reporting`/`view.php`/`export*.php` จะดึงมาแสดงเป็นคอลัมน์เสริมให้อัตโนมัติ
+* `uploads` — ไฟล์ที่อัปโหลดแต่ละครั้ง มี `academic_year` (จาก migration 004)
+* `submissions` — 1 แถว = 1 หน่วยงาน/สถานศึกษาต่อฟอร์ม/ชีท/**ปีการศึกษา** มีฟิลด์มาตรฐาน (seq_no,
+  school_code, school_code_issue, agency_name, school_name, amphoe, tambon, academic_year) +
+  `extra_identity` (JSON) สำหรับฟิลด์ที่ไม่เข้าชุดมาตรฐาน (เช่น "age_group" ของฟอร์ม 13,
+  "center_type"/"center_source" ของฟอร์ม 14) — ค่าพวกนี้จะไม่โผล่เป็นคอลัมน์จริงในตาราง แต่
+  `Reporting`/`view.php`/`export*.php` จะดึงมาแสดงเป็นคอลัมน์เสริมให้อัตโนมัติ
 * `submission_values` — ค่ารายคอลัมน์ (column_path => value) + `needs_review` flag
+* `schools_master` — ทำเนียบโรงเรียนอ้างอิง เก็บแยกตามปี (คีย์หลัก `(academic_year, school_code)`)
+* `app_settings` — ค่าตั้งค่าระบบแบบ key-value ทั่วไป (ตอนนี้มีแค่ `current_academic_year`)
 
 ### วิธีเพิ่มฟอร์มใหม่ (ทำตามนี้ทุกครั้ง)
 1. ใช้ `unzip`/`ZipArchive` ดู `xl/workbook.xml` หาชื่อชีทที่แน่นอน (ระวัง: ชื่อชีทที่มี `&` จะถูก
@@ -207,6 +211,37 @@
 * ทุก query ที่แตะ `schools_master`/`school_code_issue` ห่อด้วย try/catch แล้ว fallback เป็น
   "ไม่มีข้อมูล" เสมอ เพื่อไม่ให้หน้าเว็บพังถ้ายังไม่ได้รัน migration 003 บนเครื่อง server
 
+### การรองรับหลายปีการศึกษา (เพิ่มเมื่อ 2026-08-23)
+ระบบเก็บข้อมูลทุกปีการศึกษาไว้พร้อมกัน ไม่ทับกัน เลือกดูย้อนหลังได้ — สถาปัตยกรรมหลัก:
+* **`migrations/004_academic_year.sql` ต้องรันก่อนใช้งาน ไม่ใช่ optional เหมือน 002/003** —
+  ต่างจากฟีเจอร์ก่อนหน้าที่ออกแบบให้ fallback ได้ถ้ายังไม่ migrate เพราะฟีเจอร์นี้เปลี่ยนคีย์ upsert
+  หลักของระบบ (เพิ่ม `academic_year` เข้าไปในคีย์อัปเดตทับข้อมูลเดิม) — ถ้ายังไม่รัน migration
+  การอัปโหลดไฟล์ใด ๆ จะ error ทันที (INSERT ใส่คอลัมน์ที่ไม่มีอยู่จริง) ไม่ใช่แค่ฟีเจอร์เสริมหายไป
+  หน้าที่อ่านอย่างเดียว (`index.php`, `view.php`, `uploads_history.php`) ยัง fallback ได้ (ซ่อน
+  ตัวเลือกปีไปเงียบ ๆ) แต่การอัปโหลดจะพังจนกว่าจะรัน 004
+* **`app_settings`** (key-value ทั่วไป) เก็บ `current_academic_year` — ปีที่จะแปะให้ทุกไฟล์ที่
+  อัปโหลด**ใหม่**โดยอัตโนมัติ เพราะไฟล์ฟอร์มสำรวจ 1-15 **ไม่มีคอลัมน์ปีอยู่ในไฟล์เลย** (เช็กแล้ว
+  หลายไฟล์) ต้องตั้งเป็นค่ากลางของระบบแทน เปลี่ยนได้ที่ `settings.php` — อ่าน/เขียนผ่าน class
+  `Settings` (`src/Settings.php`, `Settings::currentAcademicYear($db)`)
+* **`uploads`, `submissions` มีคอลัมน์ `academic_year`** ใส่ตอน import จากค่า current setting
+  (ไม่ได้อ่านจากไฟล์) — คีย์ upsert ใน `Importer::deleteExistingSubmission` เพิ่ม `academic_year`
+  เข้าไปด้วย ดังนั้นอัปโหลดไฟล์ปีใหม่จะ**ไม่ทับ**ข้อมูลปีเก่าของหน่วยงาน/โรงเรียนเดียวกันเด็ดขาด
+  (อัปโหลดซ้ำในปีเดียวกันยังทับของเดิมตามปกติ)
+* **`schools_master` เก็บแยกตามปีด้วย** (คีย์หลักเปลี่ยนจาก `school_code` เดี่ยว ๆ เป็นคู่
+  `(academic_year, school_code)`) — ต่างจากฟอร์มสำรวจ ไฟล์ทำเนียบโรงเรียน**มีคอลัมน์ปีอยู่ในไฟล์จริง
+  (`YearEdu`)** จึง**อ่านปีจากไฟล์อัตโนมัติ**ใน `schools_master.php` แทนที่จะใช้ current setting —
+  ถ้าตรวจจับจากคอลัมน์ไม่ได้ มีช่องกรอกปีเองสำรองไว้ อัปโหลดใหม่จะแทนที่**เฉพาะทำเนียบของปีนั้น**
+  (`DELETE ... WHERE academic_year = :y` ก่อน insert) ไม่ใช่ TRUNCATE ทั้งตารางเหมือนก่อนหน้านี้
+  แล้ว `Importer::knownSchoolCodes(int $academicYear)` จะเทียบกับทำเนียบของปีเดียวกับที่กำลังนำเข้า
+  เท่านั้น (cache แยกเป็น array ต่อปีในตัวแปร `$knownSchoolCodesByYear`)
+* **ทุกจุดที่ query ข้อมูลรวม/ดู/ส่งออก** (`index.php`, `view.php`, `Reporting::pivot()`,
+  `Reporting::tidyRows()`, `export.php`, `export_tidy.php`, `uploads_history.php`) รับ
+  `academic_year` เป็น filter ทางเลือก (`null`/`'all'` = ทุกปีรวมกัน) — ตอนแสดงผลรวมหลายปี ต้อง
+  โชว์คอลัมน์ "ปีการศึกษา" เพิ่มด้วยไม่งั้นแยกไม่ออกว่าแถวไหนของปีไหน (ดู `$showAllYears` ใน
+  `view.php`/`export.php`/`export_tidy.php`)
+* หน้า `index.php` (แดชบอร์ด) มี dropdown เลือกปี ค่า default = current setting — เปลี่ยนปีแล้ว
+  ลิงก์ "ดูข้อมูล" ของทุกแถวจะพาไปที่ `view.php` พร้อม `&year=` เดียวกันอัตโนมัติ
+
 ### ข้อจำกัดของเครื่องมือพัฒนา (สำหรับ AI ที่มาทำงานต่อ)
 * Mac เครื่องที่พัฒนาระบบนี้ไม่มี PHP ติดตั้ง (macOS ไม่ bundle PHP มาให้แล้ว และไม่มี Homebrew)
   จึงไม่เคยรัน PHP จริงบนเครื่อง dev เลยตลอดการพัฒนา — โค้ดทุกไฟล์เขียนแบบตรวจสอบด้วยมืออย่าง
@@ -219,7 +254,8 @@
 
 ---
 
-*อัปเดตล่าสุดเมื่อ: 2026-08-22 (เพิ่มฟอร์ม 13, ตัดฟอร์ม 15, เพิ่มการตรวจซ่อนแถว/คอลัมน์และตรวจ
+*อัปเดตล่าสุดเมื่อ: 2026-08-23 (เพิ่มฟอร์ม 13, ตัดฟอร์ม 15, เพิ่มการตรวจซ่อนแถว/คอลัมน์และตรวจ
 โครงสร้างคอลัมน์เทียบต้นฉบับ, จัดกลุ่มแดชบอร์ดตามฟอร์ม, เพิ่มปุ่มลบทั้งไฟล์ในหน้าประวัติการอัปโหลด,
 แก้บั๊กแถวหมายเหตุหลายบรรทัดหลุดเข้าเป็นข้อมูล, รวมฟอร์ม 14ก+14ข เป็นชุดข้อมูลเดียว, เพิ่มการตรวจสอบ
-รหัสสถานศึกษาเทียบทำเนียบโรงเรียน (schools_master.php, migration 003))*
+รหัสสถานศึกษาเทียบทำเนียบโรงเรียน (schools_master.php, migration 003), เพิ่มการรองรับหลายปีการศึกษา
+ทั้งระบบ (academic_year, settings.php, migration 004 — ต้องรันก่อนอัปโหลดได้))*

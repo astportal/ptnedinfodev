@@ -9,6 +9,7 @@ if (!isset($forms[$formKey])) {
     $formKey = array_key_first($forms);
 }
 $formDef = $forms[$formKey];
+$currentYear = Settings::currentAcademicYear($db);
 
 $results = null;
 $uploadError = '';
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 try {
                     $importer = new Importer($db);
-                    $results = $importer->importFile($formKey, $formDef, $destPath, $originalName, $storedName, Auth::userId());
+                    $results = $importer->importFile($formKey, $formDef, $destPath, $originalName, $storedName, Auth::userId(), $currentYear);
                 } catch (Throwable $e) {
                     $uploadError = 'เกิดข้อผิดพลาดขณะประมวลผลไฟล์: ' . $e->getMessage();
                 }
@@ -63,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <a href="schools_master.php">ทำเนียบโรงเรียน</a>
+    <a href="settings.php">ตั้งค่า</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>
@@ -71,7 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="card">
     <h1>อัปโหลดไฟล์แบบฟอร์ม</h1>
     <p class="muted">เลือกฟอร์มและไฟล์ .xlsx ที่หน่วยงานกรอกและส่งกลับมา ระบบจะดึงข้อมูลอัตโนมัติ
-      หากหน่วยงาน/รหัสสถานศึกษาเดิมเคยอัปโหลดมาก่อน ข้อมูลจะถูกแทนที่ด้วยไฟล์ล่าสุด</p>
+      หากหน่วยงาน/รหัสสถานศึกษาเดิมเคยอัปโหลดมาก่อน<strong>ในปีการศึกษาเดียวกัน</strong>
+      ข้อมูลจะถูกแทนที่ด้วยไฟล์ล่าสุด</p>
+    <p class="muted">ไฟล์ที่อัปโหลดจะถูกบันทึกเป็นของ <strong>ปีการศึกษา <?= h((string)$currentYear) ?></strong>
+      — <a href="settings.php">เปลี่ยนปีการศึกษาปัจจุบัน</a></p>
 
     <?php if ($uploadError): ?><div class="alert alert-err"><?= h($uploadError) ?></div><?php endif; ?>
 
