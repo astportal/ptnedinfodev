@@ -494,6 +494,10 @@ return [
                 'carry_identity_fields' => ['agency_name'],
                 'value_type'      => 'numeric', // จำนวนนักเรียนแยกตามระดับชั้น+เพศ (รวมอยู่ในคอลัมน์เดียวต่อชั้น)
                 'value_label'     => 'ระดับชั้น/เพศ',
+                // แสดงตารางสรุปยอดรวมทั้งจังหวัดบนหน้าดูข้อมูล แยกแถวตาม extra_identity field นี้
+                // (รวมทุกหน่วยงานเข้าด้วยกัน) — ดู view.php ส่วน summary_group_field
+                'summary_group_field'       => 'age_group',
+                'summary_group_field_label' => 'ช่วงอายุ',
             ],
         ],
     ],

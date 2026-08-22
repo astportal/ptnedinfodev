@@ -50,6 +50,50 @@ $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
     'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล',
 ];
+
+// Some sheets (e.g. form 13, grouped by age_group per row) benefit from a rolled-up summary
+// table above the per-row one — totals per value column, broken out by one extra_identity field
+// instead of by agency/school, using whichever rows the year filter already selected above.
+$summaryField = $sheetDef['summary_group_field'] ?? null;
+$summaryTable = null;
+if ($summaryField !== null && $pivot['rows']) {
+    $groupSums = [];   // group value => [column_path => float sum]
+    $groupHasNumeric = []; // group value => [column_path => bool]
+    $groupOrder = [];
+    foreach ($pivot['rows'] as $row) {
+        $g = (string)($row[$summaryField] ?? '');
+        if (!isset($groupSums[$g])) {
+            $groupSums[$g] = array_fill_keys($pivot['columns'], 0.0);
+            $groupHasNumeric[$g] = array_fill_keys($pivot['columns'], false);
+            $groupOrder[] = $g;
+        }
+        foreach ($pivot['columns'] as $path) {
+            $v = $row[$path] ?? '';
+            if ($v !== '' && is_numeric($v)) {
+                $groupSums[$g][$path] += (float)$v;
+                $groupHasNumeric[$g][$path] = true;
+            }
+        }
+    }
+    $formatSum = static function (float $sum, bool $hasNumeric): string {
+        if (!$hasNumeric) {
+            return '';
+        }
+        return (fmod($sum, 1.0) === 0.0) ? (string)(int)$sum : (string)$sum;
+    };
+    $summaryRows = [];
+    foreach ($groupOrder as $g) {
+        $line = ['label' => $g];
+        foreach ($pivot['columns'] as $path) {
+            $line[$path] = $formatSum($groupSums[$g][$path], $groupHasNumeric[$g][$path]);
+        }
+        $summaryRows[] = $line;
+    }
+    $summaryTable = [
+        'label'   => $sheetDef['summary_group_field_label'] ?? extra_identity_label($summaryField),
+        'rows'    => $summaryRows,
+    ];
+}
 ?>
 <!doctype html>
 <html lang="th">
@@ -96,6 +140,43 @@ $identityLabels = [
   </div>
 
   <?php if ($flash): ?><div class="alert alert-ok"><?= h($flash) ?></div><?php endif; ?>
+
+  <?php if ($summaryTable !== null): ?>
+    <div class="card">
+      <h2>สรุปยอดรวมทั้งจังหวัด แยกตาม<?= h($summaryTable['label']) ?></h2>
+      <p class="muted">รวมข้อมูลจากทุกหน่วยงาน<?= $showAllYears ? '' : ' ในปีการศึกษา ' . h((string)$selectedYear) ?>เข้าด้วยกัน</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th><?= h($summaryTable['label']) ?></th>
+              <?php foreach ($pivot['columns'] as $path): ?>
+                <th><?= h($path) ?></th>
+              <?php endforeach; ?>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($summaryTable['rows'] as $line): ?>
+              <tr>
+                <td style="font-weight:600;"><?= h($line['label'] !== '' ? $line['label'] : '(ไม่ระบุ)') ?></td>
+                <?php foreach ($pivot['columns'] as $path): ?>
+                  <td><?= h($line[$path]) ?></td>
+                <?php endforeach; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:700; background:#f3f4f6;">
+              <td>รวมทั้งหมดทุก<?= h($summaryTable['label']) ?></td>
+              <?php foreach ($pivot['columns'] as $path): ?>
+                <td><?= h((string)($pivot['totals'][$path] ?? '')) ?></td>
+              <?php endforeach; ?>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  <?php endif; ?>
 
   <div class="card">
     <?php if (!$pivot['rows']): ?>
