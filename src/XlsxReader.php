@@ -100,7 +100,7 @@ class XlsxReader
      * Read a sheet into a dense grid: [rowNum => [colIndex => value]], 1-based.
      * Merged cells are filled so every covered cell carries the top-left value.
      *
-     * @return array{grid: array<int, array<int, string>>, maxRow: int, maxCol: int}
+     * @return array{grid: array<int, array<int, string>>, maxRow: int, maxCol: int, hiddenRows: array<int, true>, hiddenCols: array<int, true>}
      */
     public function readGrid(string $sheetName, ?int $maxRow = null): array
     {
@@ -115,6 +115,20 @@ class XlsxReader
         $grid = [];
         $maxColSeen = 0;
         $maxRowSeen = 0;
+        $hiddenRows = [];
+        $hiddenCols = [];
+
+        // <col min="X" max="Y" hidden="1"/> marks a whole range of columns hidden.
+        foreach ($doc->getElementsByTagName('col') as $colEl) {
+            if ($colEl->getAttribute('hidden') !== '1') {
+                continue;
+            }
+            $min = (int)$colEl->getAttribute('min');
+            $max = (int)$colEl->getAttribute('max');
+            for ($c = $min; $c <= $max; $c++) {
+                $hiddenCols[$c] = true;
+            }
+        }
 
         foreach ($doc->getElementsByTagName('row') as $rowEl) {
             $rowNum = (int)$rowEl->getAttribute('r');
@@ -122,6 +136,9 @@ class XlsxReader
                 break;
             }
             $maxRowSeen = max($maxRowSeen, $rowNum);
+            if ($rowEl->getAttribute('hidden') === '1') {
+                $hiddenRows[$rowNum] = true;
+            }
             foreach ($rowEl->getElementsByTagName('c') as $cEl) {
                 $ref = $cEl->getAttribute('r');
                 if (!preg_match('/^([A-Z]+)(\d+)$/', $ref, $m)) {
@@ -176,6 +193,6 @@ class XlsxReader
             }
         }
 
-        return ['grid' => $grid, 'maxRow' => $maxRowSeen, 'maxCol' => $maxColSeen];
+        return ['grid' => $grid, 'maxRow' => $maxRowSeen, 'maxCol' => $maxColSeen, 'hiddenRows' => $hiddenRows, 'hiddenCols' => $hiddenCols];
     }
 }

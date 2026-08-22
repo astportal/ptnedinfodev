@@ -42,6 +42,10 @@ class Importer
                 if ($needsReview > 0) {
                     $message .= " — พบ {$needsReview} ค่าที่ไม่แน่ใจว่าเป็นตัวเลขหรือไม่ ต้องตรวจสอบ";
                 }
+                if ($sheetResult['hidden_rows'] > 0 || $sheetResult['hidden_cols'] > 0) {
+                    $message .= " — ข้าม " . $sheetResult['hidden_rows'] . " แถว และ "
+                        . $sheetResult['hidden_cols'] . " คอลัมน์ที่ถูกซ่อนไว้ในไฟล์ ไม่นำเข้าข้อมูล";
+                }
                 $results[] = [
                     'sheet_name'   => $sheetName,
                     'status'       => 'parsed',
@@ -64,7 +68,7 @@ class Importer
     }
 
     /**
-     * @return array{rows: int, needs_review: int}
+     * @return array{rows: int, needs_review: int, hidden_rows: int, hidden_cols: int}
      */
     private function importSheet(XlsxReader $reader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
     {
@@ -79,6 +83,8 @@ class Importer
         $grid = $data['grid'];
         $maxCol = $data['maxCol'];
         $maxRow = $data['maxRow'];
+        $hiddenRows = $data['hiddenRows'];
+        $hiddenCols = $data['hiddenCols'];
 
         // Build column_path for every value column beyond identity_cols, by joining the text of
         // every non-skipped header row (blank/duplicate-adjacent parts skipped). Some templates
@@ -89,9 +95,17 @@ class Importer
         // shallower row diverges, inheritance stops for the rest of this column, so a blank cell
         // right after an unrelated single-column group (e.g. a "รวม" total column) doesn't
         // accidentally inherit that group's label instead of being left blank.
+        //
+        // Columns hidden in the source file are skipped entirely (never added to $columnPaths),
+        // so whatever data is in them is never imported — same treatment as hidden rows below.
         $columnPaths = [];
         $prevRowTexts = [];
+        $hiddenColsSkipped = 0;
         for ($c = $identityCols + 1; $c <= $maxCol; $c++) {
+            if (isset($hiddenCols[$c])) {
+                $hiddenColsSkipped++;
+                continue;
+            }
             $parts = [];
             $prev = null;
             $curRowTexts = [];
@@ -138,9 +152,14 @@ class Importer
 
         $rowsImported = 0;
         $needsReviewCount = 0;
+        $hiddenRowsSkipped = 0;
         $this->db->beginTransaction();
         try {
             for ($r = $headerRows + 1; $r <= $maxRow; $r++) {
+                if (isset($hiddenRows[$r])) {
+                    $hiddenRowsSkipped++;
+                    continue;
+                }
                 $rowData = $grid[$r] ?? [];
                 if (!$this->isRealDataRow($rowData, $identityCols)) {
                     continue;
@@ -241,7 +260,12 @@ class Importer
             throw $e;
         }
 
-        return ['rows' => $rowsImported, 'needs_review' => $needsReviewCount];
+        return [
+            'rows'         => $rowsImported,
+            'needs_review' => $needsReviewCount,
+            'hidden_rows'  => $hiddenRowsSkipped,
+            'hidden_cols'  => $hiddenColsSkipped,
+        ];
     }
 
     /**
