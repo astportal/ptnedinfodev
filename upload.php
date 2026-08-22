@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="index.php">แดชบอร์ด</a>
     <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
+    <a href="schools_master.php">ทำเนียบโรงเรียน</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>
@@ -134,8 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($viewSheetName !== null): ?>
           <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($viewSheetName) ?>">ดูข้อมูลที่รวบรวม</a>
         <?php endif; ?>
-        <?php if (array_sum(array_column($results['uploads'], 'needs_review'))): ?>
-          <a class="btn" style="background:#dc2626;" href="review.php">ไปตรวจสอบค่าที่ไม่แน่ใจ</a>
+        <?php if (array_sum(array_column($results['uploads'], 'needs_review')) + array_sum(array_column($results['uploads'], 'school_code_issues'))): ?>
+          <a class="btn" style="background:#dc2626;" href="review.php">ไปตรวจสอบรายการที่ต้องตรวจสอบ</a>
         <?php endif; ?>
       </p>
     </div>

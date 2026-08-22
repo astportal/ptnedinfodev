@@ -9,8 +9,31 @@ require_once __DIR__ . '/XlsxReader.php';
  */
 class Importer
 {
+    /** @var array<string,true>|null null = not loaded yet */
+    private ?array $knownSchoolCodes = null;
+
     public function __construct(private PDO $db)
     {
+    }
+
+    /**
+     * Reference school codes uploaded via schools_master.php, cached for the lifetime of this
+     * Importer instance. Returns an empty array (validation effectively off) if the admin hasn't
+     * uploaded a roster yet — checking against an empty roster would flag every single code as
+     * unknown, which is worse than not checking at all.
+     */
+    private function knownSchoolCodes(): array
+    {
+        if ($this->knownSchoolCodes === null) {
+            try {
+                $codes = $this->db->query('SELECT school_code FROM schools_master')->fetchAll(PDO::FETCH_COLUMN);
+                $this->knownSchoolCodes = array_fill_keys($codes, true);
+            } catch (Throwable $e) {
+                // schools_master table not migrated in yet — treat as "validation not set up".
+                $this->knownSchoolCodes = [];
+            }
+        }
+        return $this->knownSchoolCodes;
     }
 
     /**
@@ -70,16 +93,20 @@ class Importer
                 if ($needsReview > 0) {
                     $message .= " — พบ {$needsReview} ค่าที่ไม่แน่ใจว่าเป็นตัวเลขหรือไม่ ต้องตรวจสอบ";
                 }
+                if ($sheetResult['school_code_issues'] > 0) {
+                    $message .= " — พบ {$sheetResult['school_code_issues']} แถวที่รหัสสถานศึกษาว่างหรือไม่ตรงกับทำเนียบ ต้องตรวจสอบ";
+                }
                 if ($sheetResult['hidden_rows'] > 0 || $sheetResult['hidden_cols'] > 0) {
                     $message .= " — ข้าม " . $sheetResult['hidden_rows'] . " แถว และ "
                         . $sheetResult['hidden_cols'] . " คอลัมน์ที่ถูกซ่อนไว้ในไฟล์ ไม่นำเข้าข้อมูล";
                 }
                 $results[] = [
-                    'sheet_name'   => $sheetName,
-                    'status'       => 'parsed',
-                    'message'      => $message,
-                    'row_count'    => $rowCount,
-                    'needs_review' => $needsReview,
+                    'sheet_name'         => $sheetName,
+                    'status'             => 'parsed',
+                    'message'            => $message,
+                    'row_count'          => $rowCount,
+                    'needs_review'       => $needsReview,
+                    'school_code_issues' => $sheetResult['school_code_issues'],
                 ];
                 $totalRows += $rowCount;
             } catch (Throwable $e) {
@@ -155,6 +182,7 @@ class Importer
 
         $rowsImported = 0;
         $needsReviewCount = 0;
+        $schoolCodeIssueCount = 0;
         $hiddenRowsSkipped = 0;
         $this->db->beginTransaction();
         try {
@@ -211,6 +239,22 @@ class Importer
 
                 $extraJson = $extra ? json_encode($extra, JSON_UNESCAPED_UNICODE) : null;
 
+                // Flag rows whose school_code is blank or not found in the reference roster
+                // (schools_master, uploaded via schools_master.php) for manual review — only for
+                // sheets that actually have a school_code identity column, and only once the admin
+                // has uploaded a roster (see knownSchoolCodes() for why an empty roster skips this).
+                $schoolCodeIssue = null;
+                if (in_array('school_code', $identityFields, true) && $this->knownSchoolCodes()) {
+                    if (($standard['school_code'] ?? null) === null) {
+                        $schoolCodeIssue = 'missing';
+                    } elseif (!isset($this->knownSchoolCodes()[$standard['school_code']])) {
+                        $schoolCodeIssue = 'not_found';
+                    }
+                }
+                if ($schoolCodeIssue !== null) {
+                    $schoolCodeIssueCount++;
+                }
+
                 // Upsert key: same form+sheet+school_code, or — when there's no school_code —
                 // the same agency_name + school_name + extra_identity together (NULL-safe), so
                 // multiple rows that share an agency (e.g. several centers under one อปท., or
@@ -220,22 +264,23 @@ class Importer
 
                 $ins = $this->db->prepare(
                     'INSERT INTO submissions
-                        (upload_id, form_key, sheet_name, row_seq, seq_no, school_code, agency_name, school_name, amphoe, tambon, extra_identity)
+                        (upload_id, form_key, sheet_name, row_seq, seq_no, school_code, school_code_issue, agency_name, school_name, amphoe, tambon, extra_identity)
                      VALUES
-                        (:upload_id, :form_key, :sheet_name, :row_seq, :seq_no, :school_code, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
+                        (:upload_id, :form_key, :sheet_name, :row_seq, :seq_no, :school_code, :school_code_issue, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
                 );
                 $ins->execute([
-                    'upload_id'      => $uploadId,
-                    'form_key'       => $formKey,
-                    'sheet_name'     => $storageSheetName,
-                    'row_seq'        => $r,
-                    'seq_no'         => $standard['seq_no'],
-                    'school_code'    => $standard['school_code'],
-                    'agency_name'    => $standard['agency_name'],
-                    'school_name'    => $standard['school_name'],
-                    'amphoe'         => $standard['amphoe'],
-                    'tambon'         => $standard['tambon'],
-                    'extra_identity' => $extraJson,
+                    'upload_id'         => $uploadId,
+                    'form_key'          => $formKey,
+                    'sheet_name'        => $storageSheetName,
+                    'row_seq'           => $r,
+                    'seq_no'            => $standard['seq_no'],
+                    'school_code'       => $standard['school_code'],
+                    'school_code_issue' => $schoolCodeIssue,
+                    'agency_name'       => $standard['agency_name'],
+                    'school_name'       => $standard['school_name'],
+                    'amphoe'            => $standard['amphoe'],
+                    'tambon'            => $standard['tambon'],
+                    'extra_identity'    => $extraJson,
                 ]);
                 $submissionId = (int)$this->db->lastInsertId();
 
@@ -276,10 +321,11 @@ class Importer
         }
 
         return [
-            'rows'         => $rowsImported,
-            'needs_review' => $needsReviewCount,
-            'hidden_rows'  => $hiddenRowsSkipped,
-            'hidden_cols'  => $hiddenColsSkipped,
+            'rows'               => $rowsImported,
+            'needs_review'       => $needsReviewCount,
+            'school_code_issues' => $schoolCodeIssueCount,
+            'hidden_rows'        => $hiddenRowsSkipped,
+            'hidden_cols'        => $hiddenColsSkipped,
         ];
     }
 

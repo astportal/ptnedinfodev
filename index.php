@@ -8,6 +8,12 @@ $forms = form_registry();
 $countStmt = $db->prepare('SELECT COUNT(*) FROM submissions WHERE form_key = :fk AND sheet_name = :sn');
 $lastStmt  = $db->prepare('SELECT uploaded_at FROM uploads WHERE form_key = :fk AND sheet_name = :sn ORDER BY uploaded_at DESC LIMIT 1');
 $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHERE needs_review = 1')->fetchColumn();
+try {
+    // school_code_issue column only exists after migrations/003_school_code_check.sql is applied.
+    $needsReviewTotal += (int)$db->query("SELECT COUNT(*) FROM submissions WHERE school_code_issue IS NOT NULL")->fetchColumn();
+} catch (Throwable $e) {
+    // migration not applied yet — skip silently, needs_review still works for numeric values
+}
 ?>
 <!doctype html>
 <html lang="th">
@@ -22,6 +28,7 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
   <nav>
     <a href="review.php">รายการที่ต้องตรวจสอบ<?= $needsReviewTotal > 0 ? " ({$needsReviewTotal})" : '' ?></a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
+    <a href="schools_master.php">ทำเนียบโรงเรียน</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>
