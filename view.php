@@ -13,7 +13,7 @@ if (!isset($forms[$formKey])) {
 $formDef = $forms[$formKey];
 $sheetDef = null;
 foreach ($formDef['sheets'] as $sd) {
-    if ($sd['sheet_name'] === $sheetName) {
+    if (($sd['db_sheet_name'] ?? $sd['sheet_name']) === $sheetName) {
         $sheetDef = $sd;
         break;
     }

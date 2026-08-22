@@ -51,10 +51,19 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
         </thead>
         <tbody>
         <?php foreach ($forms as $formKey => $formDef): ?>
-          <?php $sheetCount = count($formDef['sheets']); ?>
-          <?php foreach ($formDef['sheets'] as $i => $sheetDef): ?>
+          <?php
+            // Several sheetDefs can share one db_sheet_name (a merged form, e.g. 14ก+14ข from
+            // two different original files stored together) — collapse those to one dashboard row.
+            $displaySheetNames = [];
+            foreach ($formDef['sheets'] as $sheetDef) {
+                $storageName = $sheetDef['db_sheet_name'] ?? $sheetDef['sheet_name'];
+                $displaySheetNames[$storageName] = $storageName;
+            }
+            $displaySheetNames = array_values($displaySheetNames);
+            $sheetCount = count($displaySheetNames);
+          ?>
+          <?php foreach ($displaySheetNames as $i => $sheetName): ?>
             <?php
-              $sheetName = $sheetDef['sheet_name'];
               $countStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
               $count = (int)$countStmt->fetchColumn();
               $lastStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);

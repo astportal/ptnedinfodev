@@ -33,6 +33,7 @@ function extra_identity_label(string $field): string
     static $labels = [
         'age_group'  => 'ช่วงอายุ',
         'center_type' => 'ประเภทศูนย์',
+        'center_source' => 'มาจากฟอร์ม',
     ];
     return $labels[$field] ?? $field;
 }

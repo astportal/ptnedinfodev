@@ -498,12 +498,18 @@ return [
         ],
     ],
 
-    '14a_childcare_centers' => [
-        'form_label'     => 'ตารางที่ 14ก ข้อมูลศูนย์พัฒนาเด็กเล็ก',
-        'source_file'    => '14_ก-ข้อมูลศูนย์พัฒนาเด็กเล็ก.xlsx',
+    // รวมฟอร์ม 14ก และ 14ข เป็นชุดข้อมูลเดียว (นับ/ดู/ส่งออกรวมกัน) ตามคำขอผู้ใช้งาน — ทั้งสอง
+    // ไฟล์มีโครงสร้างคอลัมน์เหมือนกันทุกประการ ต่างกันแค่กลุ่มศูนย์ที่สำรวจ จึงให้ทั้งสองชีท
+    // (คนละไฟล์ .xlsx ต้นฉบับ) เขียนลง db_sheet_name เดียวกัน โดยแปะ 'center_source' ไว้ใน
+    // extra_identity ของแต่ละแถว เพื่อให้ยังกรอง/แยกดูตามที่มาเดิมได้ถ้าต้องการ
+    '14_childcare_centers' => [
+        'form_label'     => 'ตารางที่ 14 ข้อมูลศูนย์พัฒนาเด็กเล็ก/สถานพัฒนาเด็กปฐมวัย (รวม 14ก+14ข)',
         'sheets' => [
             [
                 'sheet_name'      => '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก',
+                'source_file'     => '14_ก-ข้อมูลศูนย์พัฒนาเด็กเล็ก.xlsx',
+                'db_sheet_name'   => '14.ศูนย์พัฒนาเด็กเล็ก+ปฐมวัย (รวม)',
+                'optional'        => true, // อัปโหลดไฟล์นี้หรือ 14ข ไฟล์ใดไฟล์หนึ่งก็ได้ ไม่ใช่ทั้งสองพร้อมกัน
                 'skip_rows'       => [1],
                 'header_rows'     => 4,
                 'identity_cols'   => 6,
@@ -511,23 +517,21 @@ return [
                 // "เป็นศูนย์ถ่ายโอน/ตั้งเอง" แทรก) — center_type ไม่ใช่ field มาตรฐาน จะถูกเก็บลง
                 // extra_identity (JSON) แทนที่จะมีคอลัมน์ของตัวเองในตาราง
                 'identity_fields' => ['seq_no', 'tambon', 'amphoe', 'agency_name', 'center_type', 'school_name'],
+                'fixed_extra_identity' => ['center_source' => '14ก ศูนย์พัฒนาเด็กเล็ก'],
                 'value_type'      => 'numeric', // จำนวนเด็กเล็กแยกอายุ/เพศ + จำนวนครูแยกวุฒิ/เพศ
                 'value_label'     => 'รายการ',
                 'value_split_last' => 'เพศ',
             ],
-        ],
-    ],
-
-    '14b_ecd_centers' => [
-        'form_label'     => 'ตารางที่ 14ข ข้อมูลสถานพัฒนาเด็กปฐมวัย',
-        'source_file'    => '14_ข-ข้อมูลสถานพัฒนาเด็กปฐมวัย.xlsx',
-        'sheets' => [
             [
                 'sheet_name'      => '14.สถานพัฒนาเด็กปฐมวัย',
+                'source_file'     => '14_ข-ข้อมูลสถานพัฒนาเด็กปฐมวัย.xlsx',
+                'db_sheet_name'   => '14.ศูนย์พัฒนาเด็กเล็ก+ปฐมวัย (รวม)',
+                'optional'        => true,
                 'skip_rows'       => [1],
                 'header_rows'     => 4,
                 'identity_cols'   => 6,
                 'identity_fields' => ['seq_no', 'tambon', 'amphoe', 'agency_name', 'center_type', 'school_name'],
+                'fixed_extra_identity' => ['center_source' => '14ข สถานพัฒนาเด็กปฐมวัย'],
                 'value_type'      => 'numeric',
                 'value_label'     => 'รายการ',
                 'value_split_last' => 'เพศ',

@@ -22,22 +22,22 @@ class Importer
         $results = [];
         $totalRows = 0;
 
-        // The original blank template for this form, used to check the uploaded file's column
+        // The original blank template for a sheet, used to check the uploaded file's column
         // structure hasn't drifted (columns inserted/deleted/reordered) before importing anything.
-        // One reader per form, reused across all of that form's sheets.
-        $referenceReader = null;
-        $referencePath = __DIR__ . '/../reference_templates/' . ($formDef['source_file'] ?? '');
-        if (isset($formDef['source_file']) && is_file($referencePath)) {
-            try {
-                $referenceReader = new XlsxReader($referencePath);
-            } catch (Throwable $e) {
-                $referenceReader = null; // don't let a broken reference file block real uploads
-            }
-        }
+        // Normally every sheet of a form comes from the same source_file (declared once on the
+        // form), but a merged form (e.g. 14ก+14ข) has sheets from two different original files,
+        // so source_file can also be declared per-sheet; readers are cached by filename either way.
+        $referenceReaders = [];
 
         foreach ($formDef['sheets'] as $sheetDef) {
             $sheetName = $sheetDef['sheet_name'];
             if (!in_array($sheetName, $reader->sheetNames(), true)) {
+                if (!empty($sheetDef['optional'])) {
+                    // This sheet belongs to an alternate source file for a merged form (the
+                    // uploaded file is expected to contain only one of the alternatives) —
+                    // not finding it here is normal, not an error.
+                    continue;
+                }
                 $results[] = [
                     'sheet_name' => $sheetName,
                     'status'     => 'error',
@@ -46,6 +46,21 @@ class Importer
                 ];
                 continue;
             }
+
+            $sourceFile = $sheetDef['source_file'] ?? $formDef['source_file'] ?? null;
+            if ($sourceFile !== null && !array_key_exists($sourceFile, $referenceReaders)) {
+                $referencePath = __DIR__ . '/../reference_templates/' . $sourceFile;
+                if (is_file($referencePath)) {
+                    try {
+                        $referenceReaders[$sourceFile] = new XlsxReader($referencePath);
+                    } catch (Throwable $e) {
+                        $referenceReaders[$sourceFile] = null; // don't let a broken reference file block real uploads
+                    }
+                } else {
+                    $referenceReaders[$sourceFile] = null;
+                }
+            }
+            $referenceReader = $sourceFile !== null ? $referenceReaders[$sourceFile] : null;
 
             try {
                 $sheetResult = $this->importSheet($reader, $referenceReader, $formKey, $sheetDef, $originalFilename, $storedFilename, $uploadedBy);
@@ -86,6 +101,10 @@ class Importer
     private function importSheet(XlsxReader $reader, ?XlsxReader $referenceReader, string $formKey, array $sheetDef, string $originalFilename, string $storedFilename, ?int $uploadedBy): array
     {
         $sheetName    = $sheetDef['sheet_name'];
+        // Normally the same as $sheetName; differs only for a merged form (e.g. 14ก+14ข) where
+        // several distinct Excel sheets (from different original files) should land in the same
+        // submissions bucket so they're counted/viewed together.
+        $storageSheetName = $sheetDef['db_sheet_name'] ?? $sheetName;
         $headerRows   = $sheetDef['header_rows'];
         $skipRows     = $sheetDef['skip_rows'] ?? [$sheetDef['title_row'] ?? 0];
         $identityCols = $sheetDef['identity_cols'];
@@ -123,7 +142,7 @@ class Importer
         );
         $stmt->execute([
             'form_key'          => $formKey,
-            'sheet_name'        => $sheetName,
+            'sheet_name'        => $storageSheetName,
             'original_filename' => $originalFilename,
             'stored_filename'   => $storedFilename,
             'uploaded_by'       => $uploadedBy,
@@ -174,7 +193,9 @@ class Importer
 
                 $knownFields = ['seq_no', 'school_code', 'agency_name', 'school_name', 'amphoe', 'tambon'];
                 $standard = [];
-                $extra = [];
+                // Metadata fixed per sheet (not read from any column) — e.g. which of two merged
+                // source forms a row came from — goes into extra_identity alongside real columns.
+                $extra = $sheetDef['fixed_extra_identity'] ?? [];
                 foreach ($identity as $field => $val) {
                     if (in_array($field, $knownFields, true)) {
                         $standard[$field] = $val !== '' ? $val : null;
@@ -195,7 +216,7 @@ class Importer
                 // multiple rows that share an agency (e.g. several centers under one อปท., or
                 // several age-bracket rows for one agency) don't overwrite each other; re-imports
                 // still replace the previous submission for that same exact entity.
-                $this->deleteExistingSubmission($formKey, $sheetName, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
+                $this->deleteExistingSubmission($formKey, $storageSheetName, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
 
                 $ins = $this->db->prepare(
                     'INSERT INTO submissions
@@ -206,7 +227,7 @@ class Importer
                 $ins->execute([
                     'upload_id'      => $uploadId,
                     'form_key'       => $formKey,
-                    'sheet_name'     => $sheetName,
+                    'sheet_name'     => $storageSheetName,
                     'row_seq'        => $r,
                     'seq_no'         => $standard['seq_no'],
                     'school_code'    => $standard['school_code'],

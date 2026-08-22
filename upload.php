@@ -114,8 +114,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endforeach; ?>
         </tbody>
       </table>
+      <?php
+        // Link to whichever sheet was actually parsed from this upload — sheet_name in
+        // $results is the raw Excel sheet name, but data is stored under db_sheet_name
+        // when a sheetDef declares one (e.g. a merged form like 14ก+14ข), so look that up.
+        $viewSheetName = null;
+        foreach ($results['uploads'] as $r) {
+            if ($r['status'] === 'parsed') {
+                foreach ($formDef['sheets'] as $sd) {
+                    if ($sd['sheet_name'] === $r['sheet_name']) {
+                        $viewSheetName = $sd['db_sheet_name'] ?? $sd['sheet_name'];
+                        break 2;
+                    }
+                }
+            }
+        }
+      ?>
       <p style="margin-top:16px;">
-        <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($formDef['sheets'][0]['sheet_name']) ?>">ดูข้อมูลที่รวบรวม</a>
+        <?php if ($viewSheetName !== null): ?>
+          <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($viewSheetName) ?>">ดูข้อมูลที่รวบรวม</a>
+        <?php endif; ?>
         <?php if (array_sum(array_column($results['uploads'], 'needs_review'))): ?>
           <a class="btn" style="background:#dc2626;" href="review.php">ไปตรวจสอบค่าที่ไม่แน่ใจ</a>
         <?php endif; ?>
