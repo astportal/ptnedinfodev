@@ -111,7 +111,17 @@ function form_label_for(array $forms, string $key): string
       <p class="muted">ยังไม่มีประวัติการอัปโหลด</p>
     <?php else: ?>
       <div class="table-scroll">
-        <table>
+        <table style="table-layout: fixed;">
+          <colgroup>
+            <col style="width: 12%;">
+            <col style="width: 16%;">
+            <col style="width: 14%;">
+            <col style="width: 14%;">
+            <col style="width: 7%;">
+            <col style="width: 8%;">
+            <col style="width: 10%;">
+            <col style="width: 19%;">
+          </colgroup>
           <thead>
             <tr>
               <th>วันที่อัปโหลด</th>
@@ -131,10 +141,10 @@ function form_label_for(array $forms, string $key): string
               <?php $isFirstOfGroup = $i === 0; ?>
               <?php $groupBorder = $rowCount > 1 ? ' style="border-top: 3px solid #cbd5e1;"' : ''; ?>
               <tr>
-                <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['uploaded_at']) ?></td>
-                <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h(form_label_for($forms, $u['form_key'])) ?></td>
-                <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['sheet_name']) ?></td>
-                <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['original_filename']) ?></td>
+                <td style="white-space: normal;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['uploaded_at']) ?></td>
+                <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h(form_label_for($forms, $u['form_key'])) ?></td>
+                <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['sheet_name']) ?></td>
+                <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['original_filename']) ?></td>
                 <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h((string)$u['row_count']) ?></td>
                 <td<?= $isFirstOfGroup ? $groupBorder : '' ?>>
                   <?php if ($u['status'] === 'parsed'): ?>
@@ -143,15 +153,15 @@ function form_label_for(array $forms, string $key): string
                     <span class="badge badge-err">ผิดพลาด</span>
                   <?php endif; ?>
                 </td>
-                <td<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['uploaded_by_name'] ?? '—') ?></td>
-                <td style="white-space:nowrap;"<?= $isFirstOfGroup ? $groupBorder : '' ?>>
-                  <form method="post" onsubmit="return confirm('ยืนยันลบชีทนี้และข้อมูลที่มากับชีทนี้ทั้งหมด? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0; display:inline;">
+                <td style="white-space: normal; word-break: break-word;"<?= $isFirstOfGroup ? $groupBorder : '' ?>><?= h($u['uploaded_by_name'] ?? '—') ?></td>
+                <td style="white-space: normal;"<?= $isFirstOfGroup ? $groupBorder : '' ?>>
+                  <form method="post" onsubmit="return confirm('ยืนยันลบชีทนี้และข้อมูลที่มากับชีทนี้ทั้งหมด? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0 0 4px; display:inline-block;">
                     <input type="hidden" name="action" value="delete_upload">
                     <input type="hidden" name="upload_id" value="<?= (int)$u['id'] ?>">
                     <button type="submit" class="btn btn-secondary" style="padding:6px 12px; font-size:13px;">ลบชีทนี้</button>
                   </form>
                   <?php if ($isFirstOfGroup && $rowCount > 1): ?>
-                    <form method="post" onsubmit="return confirm('ยืนยันลบไฟล์นี้ทั้งหมด (<?= $rowCount ?> ชีท) และข้อมูลที่มากับไฟล์นี้ทั้งหมด? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0; display:inline;">
+                    <form method="post" onsubmit="return confirm('ยืนยันลบไฟล์นี้ทั้งหมด (<?= $rowCount ?> ชีท) และข้อมูลที่มากับไฟล์นี้ทั้งหมด? การกระทำนี้ย้อนกลับไม่ได้');" style="margin:0 0 4px; display:inline-block;">
                       <input type="hidden" name="action" value="delete_upload_batch">
                       <input type="hidden" name="form_key" value="<?= h($batch['form_key']) ?>">
                       <input type="hidden" name="stored_filename" value="<?= h($batch['stored_filename']) ?>">
