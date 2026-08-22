@@ -145,6 +145,13 @@ class Importer
                     continue;
                 }
                 $rowData = $grid[$r] ?? [];
+                if ($this->isNoteMarkerRow($rowData, $identityCols)) {
+                    // "หมายเหตุ" marks the start of an explanatory note block below the
+                    // table (often spanning many rows of footnotes/instructions, only the
+                    // first of which literally starts with "หมายเหตุ") — everything from
+                    // here to the end of the sheet is instructions, not data, so stop.
+                    break;
+                }
                 if (!$this->isRealDataRow($rowData, $identityCols)) {
                     continue;
                 }
@@ -379,6 +386,23 @@ class Importer
     }
 
     /**
+     * True when this row is the start of a "หมายเหตุ" footnote block below the table.
+     * These blocks commonly span many rows of explanation, only the first of which
+     * literally starts with "หมายเหตุ" — the caller stops importing entirely once this
+     * is hit, rather than trying to recognize every continuation line individually.
+     */
+    private function isNoteMarkerRow(array $rowData, int $identityCols): bool
+    {
+        for ($i = 1; $i <= $identityCols; $i++) {
+            $text = trim((string)($rowData[$i] ?? ''));
+            if ($text !== '' && str_starts_with($text, 'หมายเหตุ')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Decide whether a row is real filled-in data, or an empty/placeholder/example row
      * left over from the blank template (e.g. "รหัสสถานศึกษา 10 หลัก", "สำนักงาน...").
      */
@@ -394,7 +418,7 @@ class Importer
             // Placeholder hint text left in the blank template always contains an
             // ellipsis or the "10 หลัก" instruction — real submitted data never does.
             if (str_contains($text, '...') || str_contains($text, '10 หลัก')
-                || str_starts_with($text, '(ตัวอย่าง)') || str_starts_with($text, 'หมายเหตุ')) {
+                || str_starts_with($text, '(ตัวอย่าง)')) {
                 return false;
             }
         }
