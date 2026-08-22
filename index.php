@@ -39,7 +39,14 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
 
   <div class="card">
     <div class="table-scroll">
-      <table>
+      <table style="table-layout: fixed;">
+        <colgroup>
+          <col style="width: 26%;">
+          <col style="width: 24%;">
+          <col style="width: 10%;">
+          <col style="width: 14%;">
+          <col style="width: 26%;">
+        </colgroup>
         <thead>
           <tr>
             <th>ฟอร์ม</th>
@@ -73,14 +80,14 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
             ?>
             <tr>
               <?php if ($isFirstOfGroup): ?>
-                <td rowspan="<?= $sheetCount ?>" style="border-top: 3px solid #cbd5e1; vertical-align: top; font-weight: 600;"><?= h($formDef['form_label']) ?></td>
+                <td rowspan="<?= $sheetCount ?>" style="border-top: 3px solid #cbd5e1; vertical-align: top; font-weight: 600; white-space: normal; word-break: break-word;"><?= h($formDef['form_label']) ?></td>
               <?php endif; ?>
-              <td<?= $groupBorder ?>><?= h($sheetName) ?></td>
+              <td style="white-space: normal; word-break: break-word;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>"><?= h($sheetName) ?></td>
               <td<?= $groupBorder ?>><?= $count ?></td>
-              <td class="muted"<?= $groupBorder ?>><?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?></td>
-              <td style="white-space:nowrap;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>">
-                <a class="btn" style="padding:6px 12px; font-size:13px;" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
-                <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px;" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดูข้อมูล</a>
+              <td class="muted" style="white-space: normal;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>"><?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?></td>
+              <td style="white-space: normal;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>">
+                <a class="btn" style="padding:6px 12px; font-size:13px; display:inline-block; margin-bottom:4px;" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
+                <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px; display:inline-block; margin-bottom:4px;" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดูข้อมูล</a>
               </td>
             </tr>
           <?php endforeach; ?>
