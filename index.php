@@ -51,20 +51,25 @@ $needsReviewTotal = (int)$db->query('SELECT COUNT(*) FROM submission_values WHER
         </thead>
         <tbody>
         <?php foreach ($forms as $formKey => $formDef): ?>
-          <?php foreach ($formDef['sheets'] as $sheetDef): ?>
+          <?php $sheetCount = count($formDef['sheets']); ?>
+          <?php foreach ($formDef['sheets'] as $i => $sheetDef): ?>
             <?php
               $sheetName = $sheetDef['sheet_name'];
               $countStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
               $count = (int)$countStmt->fetchColumn();
               $lastStmt->execute(['fk' => $formKey, 'sn' => $sheetName]);
               $lastUpload = $lastStmt->fetchColumn();
+              $isFirstOfGroup = $i === 0;
+              $groupBorder = $isFirstOfGroup ? ' style="border-top: 3px solid #cbd5e1;"' : '';
             ?>
             <tr>
-              <td><?= h($formDef['form_label']) ?></td>
-              <td><?= h($sheetName) ?></td>
-              <td><?= $count ?></td>
-              <td class="muted"><?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?></td>
-              <td style="white-space:nowrap;">
+              <?php if ($isFirstOfGroup): ?>
+                <td rowspan="<?= $sheetCount ?>" style="border-top: 3px solid #cbd5e1; vertical-align: top; font-weight: 600;"><?= h($formDef['form_label']) ?></td>
+              <?php endif; ?>
+              <td<?= $groupBorder ?>><?= h($sheetName) ?></td>
+              <td<?= $groupBorder ?>><?= $count ?></td>
+              <td class="muted"<?= $groupBorder ?>><?= $lastUpload ? h($lastUpload) : '— ยังไม่มี' ?></td>
+              <td style="white-space:nowrap;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>">
                 <a class="btn" style="padding:6px 12px; font-size:13px;" href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
                 <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px;" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">ดูข้อมูล</a>
               </td>
