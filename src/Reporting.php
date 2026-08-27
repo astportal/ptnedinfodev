@@ -11,6 +11,52 @@ class Reporting
     }
 
     /**
+     * Look up สังกัด/หน่วยงาน (area_name), อำเภอ, ตำบล from schools_master (ทำเนียบโรงเรียน) for
+     * every distinct (academic_year, school_code) pair actually present among $submissions, so
+     * pivot()/tidyRows() can prefer the roster's values over whatever an agency typed into the
+     * survey file. Only rows with a non-blank school_code participate — sheets that don't have a
+     * school_code identity column (forms 1, 13, 14 — see forms/registry.php) are left untouched.
+     * Wrapped in try/catch like every other schools_master query (migration 003 may not be applied
+     * yet on some servers — degrade to "no overrides" rather than break the page).
+     *
+     * @param array<int,array<string,mixed>> $submissions rows from the `submissions` table
+     * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string}> keyed "{academic_year}|{school_code}"
+     */
+    private function schoolMasterOverrides(array $submissions): array
+    {
+        $codesByYear = [];
+        foreach ($submissions as $s) {
+            $code = $s['school_code'] ?? null;
+            if ($code === null || $code === '') {
+                continue;
+            }
+            $codesByYear[(int)$s['academic_year']][$code] = true;
+        }
+        if (!$codesByYear) {
+            return [];
+        }
+
+        $overrides = [];
+        try {
+            foreach ($codesByYear as $year => $codes) {
+                $codeList = array_keys($codes);
+                $placeholders = implode(',', array_fill(0, count($codeList), '?'));
+                $stmt = $this->db->prepare(
+                    "SELECT school_code, amphoe, tambon, area_name FROM schools_master
+                     WHERE academic_year = ? AND school_code IN ($placeholders)"
+                );
+                $stmt->execute(array_merge([$year], $codeList));
+                while ($row = $stmt->fetch()) {
+                    $overrides["{$year}|{$row['school_code']}"] = $row;
+                }
+            }
+        } catch (Throwable $e) {
+            return []; // ยังไม่ได้รัน migration 003 บนเซิร์ฟเวอร์นี้ — ไม่มีทำเนียบให้ใช้ ข้ามไปเงียบ ๆ
+        }
+        return $overrides;
+    }
+
+    /**
      * @return array{columns: array<int,string>, extra_identity_fields: string[], rows: array<int, array<string,mixed>>, totals: array<string,string>}
      *   columns: col_index => column_path, in original column order
      *   extra_identity_fields: names of any non-standard identity fields this sheet uses (e.g.
@@ -55,6 +101,8 @@ class Reporting
         }
         ksort($columns);
 
+        $masterOverrides = $this->schoolMasterOverrides($submissions);
+
         $extraIdentityFields = [];
         $rows = [];
         $seqNo = 0;
@@ -69,14 +117,18 @@ class Reporting
             // "ลำดับที่" ที่กรอกมาในไฟล์อัปโหลดไม่น่าเชื่อถือ (พิมพ์เอง ไม่ต่อเนื่อง/ซ้ำได้ระหว่าง
             // หลายไฟล์ที่รวมกัน) — เรียงเลขใหม่เองตามลำดับที่แสดงผลจริงเสมอ ไม่ใช้ค่าที่อัปโหลดมา
             $seqNo++;
+            $master = $masterOverrides[$s['academic_year'] . '|' . $s['school_code']] ?? null;
             $row = [
                 'id'            => $s['id'],
                 'seq_no'        => $seqNo,
                 'school_code'   => $s['school_code'],
-                'agency_name'   => $s['agency_name'],
+                // สังกัด/หน่วยงาน, อำเภอ, ตำบล ที่กรอกมาในไฟล์สำรวจพิมพ์เองได้คลาดเคลื่อน — ถ้าจับคู่
+                // รหัสสถานศึกษากับทำเนียบโรงเรียน (schools_master) ของปีเดียวกันได้ ให้ใช้ค่าจาก
+                // ทำเนียบแทนเสมอ (ไม่งั้น fallback เป็นค่าที่อัปโหลดมาตามเดิม)
+                'agency_name'   => ($master['area_name'] ?? '') !== '' ? $master['area_name'] : $s['agency_name'],
                 'school_name'   => $s['school_name'],
-                'amphoe'        => $s['amphoe'],
-                'tambon'        => $s['tambon'],
+                'amphoe'        => ($master['amphoe'] ?? '') !== '' ? $master['amphoe'] : $s['amphoe'],
+                'tambon'        => ($master['tambon'] ?? '') !== '' ? $master['tambon'] : $s['tambon'],
                 'academic_year' => $s['academic_year'],
                 '_needs_review' => [],
             ];
@@ -147,12 +199,24 @@ class Reporting
         if (!$submissions) {
             return ['value_label' => $valueLabel, 'split_label' => $splitLastLabel, 'extra_identity_fields' => [], 'rows' => []];
         }
+        $masterOverrides = $this->schoolMasterOverrides($submissions);
+
         $byId = [];
         $extraById = [];
         $seqNoById = [];
         $extraIdentityFields = [];
         $seqNo = 0;
         foreach ($submissions as $s) {
+            $master = $masterOverrides[$s['academic_year'] . '|' . $s['school_code']] ?? null;
+            if (($master['area_name'] ?? '') !== '') {
+                $s['agency_name'] = $master['area_name'];
+            }
+            if (($master['amphoe'] ?? '') !== '') {
+                $s['amphoe'] = $master['amphoe'];
+            }
+            if (($master['tambon'] ?? '') !== '') {
+                $s['tambon'] = $master['tambon'];
+            }
             $byId[$s['id']] = $s;
             // เรียง "ลำดับที่" ใหม่เองตามลำดับการแสดงผลจริง เหมือน pivot() — ไม่ใช้ค่าที่อัปโหลดมา
             // (1 submission ออกได้หลายแถวในตารางแบบยาวนี้ ทุกแถวของ submission เดียวกันใช้เลขเดียวกัน)
