@@ -57,6 +57,7 @@ class Reporting
 
         $extraIdentityFields = [];
         $rows = [];
+        $seqNo = 0;
         foreach ($submissions as $s) {
             $extra = $s['extra_identity'] ? json_decode($s['extra_identity'], true) : [];
             foreach (array_keys($extra) as $field) {
@@ -65,9 +66,12 @@ class Reporting
                 }
             }
 
+            // "ลำดับที่" ที่กรอกมาในไฟล์อัปโหลดไม่น่าเชื่อถือ (พิมพ์เอง ไม่ต่อเนื่อง/ซ้ำได้ระหว่าง
+            // หลายไฟล์ที่รวมกัน) — เรียงเลขใหม่เองตามลำดับที่แสดงผลจริงเสมอ ไม่ใช้ค่าที่อัปโหลดมา
+            $seqNo++;
             $row = [
                 'id'            => $s['id'],
-                'seq_no'        => $s['seq_no'],
+                'seq_no'        => $seqNo,
                 'school_code'   => $s['school_code'],
                 'agency_name'   => $s['agency_name'],
                 'school_name'   => $s['school_name'],
@@ -145,9 +149,14 @@ class Reporting
         }
         $byId = [];
         $extraById = [];
+        $seqNoById = [];
         $extraIdentityFields = [];
+        $seqNo = 0;
         foreach ($submissions as $s) {
             $byId[$s['id']] = $s;
+            // เรียง "ลำดับที่" ใหม่เองตามลำดับการแสดงผลจริง เหมือน pivot() — ไม่ใช้ค่าที่อัปโหลดมา
+            // (1 submission ออกได้หลายแถวในตารางแบบยาวนี้ ทุกแถวของ submission เดียวกันใช้เลขเดียวกัน)
+            $seqNoById[$s['id']] = ++$seqNo;
             $extra = $s['extra_identity'] ? json_decode($s['extra_identity'], true) : [];
             $extraById[$s['id']] = $extra;
             foreach (array_keys($extra) as $field) {
@@ -233,7 +242,7 @@ class Reporting
             }
             $s = $byId[$v['submission_id']];
             $row = [
-                'seq_no'        => $s['seq_no'],
+                'seq_no'        => $seqNoById[$v['submission_id']],
                 'school_code'   => $s['school_code'],
                 'agency_name'   => $s['agency_name'],
                 'school_name'   => $s['school_name'],
