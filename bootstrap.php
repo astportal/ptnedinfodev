@@ -33,8 +33,18 @@ function extra_identity_label(string $field): string
 {
     static $labels = [
         'age_group'  => 'ช่วงอายุ',
-        'center_type' => 'ประเภทศูนย์',
-        'center_source' => 'มาจากฟอร์ม',
+        'admin_name' => 'ผู้บริหาร/ผู้ประสานงาน',
+        'phone' => 'เบอร์โทรศัพท์',
+        'address' => 'ที่อยู่',
+        'postal_code' => 'รหัสไปรษณีย์',
+        'license_holder_name' => 'ผู้รับใบอนุญาต',
+        'manager_name' => 'ผู้จัดการ',
+        'headteacher_name' => 'ครูใหญ่',
+        'director_name' => 'ผู้อำนวยการ',
+        'tokkhru_name' => 'โต๊ะครู',
+        'pondok_size' => 'ขนาดสถาบันศึกษาปอเนาะ',
+        'school_type' => 'ประเภทโรงเรียน',
+        'established_date' => 'จัดตั้งเมื่อ',
     ];
     return $labels[$field] ?? $field;
 }
