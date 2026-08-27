@@ -303,10 +303,12 @@ class Reporting
         }
 
         $rows = [];
+        $submissionsWithARow = [];
         foreach ($values as $v) {
             if ($v['value'] === null || $v['value'] === '') {
                 continue;
             }
+            $submissionsWithARow[$v['submission_id']] = true;
             $s = $byId[$v['submission_id']];
             $row = [
                 'seq_no'        => $seqNoById[$v['submission_id']],
@@ -326,6 +328,36 @@ class Reporting
             }
             $row['ค่า'] = $v['value'];
             $row['ต้องตรวจสอบ'] = $v['needs_review'] ? 'ใช่' : '';
+            $rows[] = $row;
+        }
+
+        // Sheets with no value columns at all (e.g. form 12 — presence in the sheet IS the data,
+        // there's nothing numeric to store in submission_values) would otherwise vanish entirely
+        // from this "long" format, since every row here comes from a submission_values match —
+        // emit one row per such submission instead, with blank value/label fields, so the identity
+        // + extra_identity columns (e.g. "ชื่อโครงการ") still show up for a PivotTable to use.
+        foreach ($byId as $id => $s) {
+            if (isset($submissionsWithARow[$id])) {
+                continue;
+            }
+            $row = [
+                'seq_no'        => $seqNoById[$id],
+                'school_code'   => $s['school_code'],
+                'agency_name'   => $s['agency_name'],
+                'school_name'   => $s['school_name'],
+                'amphoe'        => $s['amphoe'],
+                'tambon'        => $s['tambon'],
+                'academic_year' => $s['academic_year'],
+            ];
+            foreach ($extraById[$id] as $field => $val) {
+                $row[$field] = $val;
+            }
+            $row[$valueLabel] = '';
+            if ($splitLastLabel !== null) {
+                $row[$splitLastLabel] = '';
+            }
+            $row['ค่า'] = '';
+            $row['ต้องตรวจสอบ'] = '';
             $rows[] = $row;
         }
 

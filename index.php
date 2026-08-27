@@ -136,7 +136,15 @@ try {
             ?>
             <tr>
               <?php if ($isFirstOfGroup): ?>
-                <td rowspan="<?= $sheetCount ?>" style="border-top: 3px solid #cbd5e1; vertical-align: top; font-weight: 600; white-space: normal; word-break: break-word;"><?= h($formDef['form_label']) ?></td>
+                <td rowspan="<?= $sheetCount ?>" style="border-top: 3px solid #cbd5e1; vertical-align: top; font-weight: 600; white-space: normal; word-break: break-word;">
+                  <?= h($formDef['form_label']) ?>
+                  <?php if ($sheetCount > 1): ?>
+                    <div style="margin-top:8px; font-weight:400;">
+                      <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px; display:inline-block; margin-bottom:4px;" href="export.php?form=<?= urlencode($formKey) ?>&sheet=__all__&year=<?= urlencode((string)$selectedYear) ?>">ดาวน์โหลดรวมทุกชีท (CSV)</a>
+                      <a class="btn btn-secondary" style="padding:6px 12px; font-size:13px; display:inline-block; margin-bottom:4px;" href="export_tidy.php?form=<?= urlencode($formKey) ?>&sheet=__all__&year=<?= urlencode((string)$selectedYear) ?>">รวมทุกชีทสำหรับ Pivot Table</a>
+                    </div>
+                  <?php endif; ?>
+                </td>
               <?php endif; ?>
               <td style="white-space: normal; word-break: break-word;<?= $isFirstOfGroup ? ' border-top: 3px solid #cbd5e1;' : '' ?>"><?= h($sheetName) ?></td>
               <td<?= $groupBorder ?>><?= $count ?></td>
