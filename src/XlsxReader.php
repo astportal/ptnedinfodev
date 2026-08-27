@@ -193,6 +193,25 @@ class XlsxReader
             }
         }
 
+        // Some real-world files end up with trailing "phantom" columns — cells that exist in the
+        // XML (often just from selecting/formatting past the real data, or a copy-paste artifact)
+        // but carry no value in ANY row, header or data. Excel still counts these in its "used
+        // range", which would otherwise fail the reference-template structure check for no real
+        // reason on every file exported from that person's machine — trim them off the end.
+        while ($maxColSeen > 0) {
+            $hasContent = false;
+            for ($r = 1; $r <= $maxRowSeen; $r++) {
+                if (($grid[$r][$maxColSeen] ?? '') !== '') {
+                    $hasContent = true;
+                    break;
+                }
+            }
+            if ($hasContent) {
+                break;
+            }
+            $maxColSeen--;
+        }
+
         return ['grid' => $grid, 'maxRow' => $maxRowSeen, 'maxCol' => $maxColSeen, 'hiddenRows' => $hiddenRows, 'hiddenCols' => $hiddenCols];
     }
 }
