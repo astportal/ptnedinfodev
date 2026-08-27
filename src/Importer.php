@@ -153,8 +153,25 @@ class Importer
         // separate decision made further down, in the value-insert loop.
         $columnPaths = $this->buildColumnPaths($grid, $maxCol, $identityCols, $headerRows, $skipRows);
 
+        // Some sheets let agencies freely append extra columns past a fixed "อื่นๆ" (other) bucket
+        // (e.g. form 10.6 — the template literally says "สามารถแทรกคอลัมน์วิชาเอกเพิ่มเติมได้") — for
+        // those, don't hard-block on a column-count mismatch; instead fold any trailing columns past
+        // the anchor into it (summed) as long as every column before the anchor still matches exactly.
+        $mergeExtraCols = null;
         if ($referenceReader !== null && in_array($sheetName, $referenceReader->sheetNames(), true)) {
-            $this->assertStructureMatches($referenceReader, $sheetName, $identityCols, $headerRows, $skipRows, $columnPaths);
+            $mergeInto = $sheetDef['merge_extra_columns_into'] ?? null;
+            if ($mergeInto !== null) {
+                $refData = $referenceReader->readGrid($sheetName);
+                $refPaths = $this->buildColumnPaths($refData['grid'], $refData['maxCol'], $identityCols, $headerRows, $skipRows);
+                $mergeExtraCols = $this->tryResolveExtraTrailingColumns($refPaths, $columnPaths, $mergeInto);
+            }
+            if ($mergeExtraCols !== null) {
+                foreach ($mergeExtraCols['extra_cols'] as $ec) {
+                    unset($columnPaths[$ec]);
+                }
+            } else {
+                $this->assertStructureMatches($referenceReader, $sheetName, $identityCols, $headerRows, $skipRows, $columnPaths);
+            }
         }
 
         $hiddenColsSkipped = 0;
@@ -296,6 +313,29 @@ class Importer
                      VALUES (:sid, :ci, :cp, :val, :nr)'
                 );
                 foreach ($columnPaths as $c => $path) {
+                    if ($mergeExtraCols !== null && $c === $mergeExtraCols['anchor_col']) {
+                        // Anchor column ("อื่นๆ") — combine its own cell with every extra trailing
+                        // column's cell for this row (skipping any that are individually hidden).
+                        $rawValues = [];
+                        if (!isset($hiddenCols[$c])) {
+                            $rawValues[] = trim((string)($rowData[$c] ?? ''));
+                        }
+                        foreach ($mergeExtraCols['extra_cols'] as $ec) {
+                            if (isset($hiddenCols[$ec])) {
+                                continue;
+                            }
+                            $rawValues[] = trim((string)($rowData[$ec] ?? ''));
+                        }
+                        [$val, $needsReview] = $this->mergeNumericCells($rawValues);
+                        if ($val === '') {
+                            continue;
+                        }
+                        if ($needsReview) {
+                            $needsReviewCount++;
+                        }
+                        $valStmt->execute(['sid' => $submissionId, 'ci' => $c, 'cp' => $path, 'val' => $val, 'nr' => $needsReview ? 1 : 0]);
+                        continue;
+                    }
                     if (isset($hiddenCols[$c])) {
                         continue; // hidden column — never imported, even though it exists in the sheet
                     }
@@ -377,6 +417,76 @@ class Importer
             $columnPaths[$c] = $parts ? implode(' / ', $parts) : "คอลัมน์ที่ " . $c;
         }
         return $columnPaths;
+    }
+
+    /**
+     * For a sheet whose sheetDef sets 'merge_extra_columns_into' (a column_path text, e.g. "อื่นๆ")
+     * — used when agencies are allowed to freely append extra columns of their own past that fixed
+     * bucket — check whether the uploaded file is exactly that shape: every column up to and
+     * including the anchor matches the reference template's column_path exactly, and there are one
+     * or more extra columns trailing after it. Returns null if the uploaded file doesn't look like
+     * that (either no extra columns, or something before/at the anchor doesn't match) — the caller
+     * then falls back to the normal hard structure check so a genuine mismatch still gets caught.
+     *
+     * @param array<int,string> $refPaths col_index => column_path, from the reference template
+     * @param array<int,string> $columnPaths col_index => column_path, from the uploaded file
+     * @return array{anchor_col:int, extra_cols:int[]}|null
+     */
+    private function tryResolveExtraTrailingColumns(array $refPaths, array $columnPaths, string $mergeInto): ?array
+    {
+        $normalize = static fn(string $s): string => preg_replace('/\s+/u', ' ', trim($s));
+
+        $refList = array_values($refPaths);
+        $refCount = count($refList);
+        if ($refCount === 0 || $normalize(end($refList)) !== $normalize($mergeInto)) {
+            return null; // reference's last column isn't the configured anchor — nothing to reconcile
+        }
+
+        $uploadedCols = array_keys($columnPaths); // ascending col_index, per buildColumnPaths() order
+        if (count($uploadedCols) <= $refCount) {
+            return null; // no extra columns to merge
+        }
+
+        for ($i = 0; $i < $refCount; $i++) {
+            $c = $uploadedCols[$i];
+            if ($normalize($columnPaths[$c]) !== $normalize($refList[$i])) {
+                return null; // mismatch before/at the anchor — not our special case
+            }
+        }
+
+        return [
+            'anchor_col' => $uploadedCols[$refCount - 1],
+            'extra_cols' => array_slice($uploadedCols, $refCount),
+        ];
+    }
+
+    /**
+     * Sum a set of raw cell strings (one per merged column) into a single numeric value, using the
+     * same "-"/"/"/number rules as classifyValue() per cell. Cells that don't classify cleanly are
+     * excluded from the sum but still flag the merged result for review. All-blank input returns ''
+     * (same as a single blank cell — nothing to import for this row/column).
+     *
+     * @param string[] $rawValues
+     * @return array{0: string, 1: bool}
+     */
+    private function mergeNumericCells(array $rawValues): array
+    {
+        $nonEmpty = array_values(array_filter($rawValues, static fn($v) => $v !== ''));
+        if (!$nonEmpty) {
+            return ['', false];
+        }
+        $sum = 0.0;
+        $needsReview = false;
+        foreach ($nonEmpty as $raw) {
+            [$val, $nr] = self::classifyValue($raw);
+            if ($nr) {
+                $needsReview = true;
+                continue;
+            }
+            $sum += (float)$val;
+        }
+        $sumStr = (fmod($sum, 1.0) === 0.0) ? (string)(int)$sum : (string)$sum;
+        return [$sumStr, $needsReview];
     }
 
     /**

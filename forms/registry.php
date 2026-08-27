@@ -27,6 +27,12 @@
  *                      name (e.g. "เพศ") instead of joining it into value_label — use when the last
  *                      level is a genuinely independent dimension (ชาย/หญิง) that reads better on
  *                      its own than glued onto the category name.
+ *   merge_extra_columns_into : optional, requires value_type 'numeric'. Set to a column_path text
+ *                      (e.g. "อื่นๆ") when the template explicitly allows agencies to append extra
+ *                      columns of their own past a fixed last column — instead of blocking the whole
+ *                      sheet on a column-count mismatch, any trailing columns after that anchor get
+ *                      summed into it. Every column up to and including the anchor must still match
+ *                      the reference template exactly, or the normal structure error still fires.
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every non-skipped header row for that column, joined with " / ". This is what
@@ -406,6 +412,11 @@ return [
                 'identity_fields' => $stdIdentity,
                 'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามวิชาเอก (ไม่มีแยกเพศ)
                 'value_label'     => 'วิชาเอก',
+                // แม่แบบมีหมายเหตุอนุญาตให้ "แทรกคอลัมน์วิชาเอกเพิ่มเติมได้" — ถ้าหน่วยงานเพิ่ม
+                // คอลัมน์ต่อท้ายหลัง "อื่นๆ" (คอลัมน์สุดท้าย) ให้รวมค่าเข้ากับ "อื่นๆ" แทนการบล็อก
+                // ทั้งชีท (ดู Importer::tryResolveExtraTrailingColumns) — คอลัมน์ก่อนหน้ายังต้องตรง
+                // กับต้นฉบับทุกคอลัมน์เหมือนเดิม ไม่งั้นจะ error ตามปกติ
+                'merge_extra_columns_into' => 'อื่นๆ',
             ],
         ],
     ],
