@@ -19,10 +19,13 @@ class Reporting
      * Wrapped in try/catch like every other schools_master query (migration 003 may not be applied
      * yet on some servers — degrade to "no overrides" rather than break the page).
      *
+     * Public so other pages that query `submissions` directly (e.g. review.php's "ต้องตรวจสอบ"
+     * lists) can apply the same override consistently instead of showing the raw uploaded value.
+     *
      * @param array<int,array<string,mixed>> $submissions rows from the `submissions` table
      * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string}> keyed "{academic_year}|{school_code}"
      */
-    private function schoolMasterOverrides(array $submissions): array
+    public function schoolMasterOverrides(array $submissions): array
     {
         $codesByYear = [];
         foreach ($submissions as $s) {

@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'resol
 }
 
 $sql = "SELECT sv.id AS value_id, sv.column_path, sv.value, s.form_key, s.sheet_name,
-               s.agency_name, s.school_name, s.school_code, u.original_filename, u.uploaded_at
+               s.agency_name, s.school_name, s.school_code, s.academic_year, u.original_filename, u.uploaded_at
         FROM submission_values sv
         JOIN submissions s ON s.id = sv.submission_id
         JOIN uploads u ON u.id = s.upload_id
@@ -41,7 +41,7 @@ $items = $db->query($sql)->fetchAll();
 // gracefully (empty list) rather than erroring out the whole page if it hasn't been run yet.
 try {
     $codeSql = "SELECT s.id AS submission_id, s.form_key, s.sheet_name, s.agency_name, s.school_name,
-                       s.school_code, s.school_code_issue, u.original_filename, u.uploaded_at
+                       s.school_code, s.school_code_issue, s.academic_year, u.original_filename, u.uploaded_at
                 FROM submissions s
                 JOIN uploads u ON u.id = s.upload_id
                 WHERE s.school_code_issue IS NOT NULL
@@ -49,6 +49,18 @@ try {
     $codeItems = $db->query($codeSql)->fetchAll();
 } catch (Throwable $e) {
     $codeItems = [];
+}
+
+// หน่วยงาน/สังกัดที่แสดงในตารางนี้ควรตรงกับหน้าดูข้อมูลอื่น ๆ เสมอ — ใช้ทำเนียบโรงเรียนแทนค่าที่
+// อัปโหลดมาถ้าจับคู่รหัสสถานศึกษาได้ เหมือน Reporting::pivot()/tidyRows() (ไม่แก้ไขข้อมูลใน
+// schools_master เอง แค่ใช้เป็นข้อมูลอ้างอิงตอนแสดงผล)
+$reporting = new Reporting($db);
+$masterOverrides = $reporting->schoolMasterOverrides(array_merge($items, $codeItems));
+function display_agency_name(array $it, array $masterOverrides): string
+{
+    $master = $masterOverrides[$it['academic_year'] . '|' . $it['school_code']] ?? null;
+    $name = ($master['area_name'] ?? '') !== '' ? $master['area_name'] : $it['agency_name'];
+    return $name ?: '—';
 }
 
 function form_label_for(array $forms, string $key): string
@@ -109,7 +121,7 @@ function form_label_for(array $forms, string $key): string
                 <span class="muted"><?= h($it['sheet_name']) ?></span>
               </td>
               <td>
-                <?= h($it['agency_name'] ?: '—') ?><br>
+                <?= h(display_agency_name($it, $masterOverrides)) ?><br>
                 <span class="muted"><?= h($it['school_name'] ?: '') ?> <?= $it['school_code'] ? '(' . h($it['school_code']) . ')' : '' ?></span>
               </td>
               <td><?= h($it['column_path']) ?></td>
@@ -161,7 +173,7 @@ function form_label_for(array $forms, string $key): string
                 <span class="muted"><?= h($it['sheet_name']) ?></span>
               </td>
               <td>
-                <?= h($it['agency_name'] ?: '—') ?><br>
+                <?= h(display_agency_name($it, $masterOverrides)) ?><br>
                 <span class="muted"><?= h($it['school_name'] ?: '') ?></span>
               </td>
               <td>
