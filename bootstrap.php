@@ -45,6 +45,7 @@ function extra_identity_label(string $field): string
         'pondok_size' => 'ขนาดสถาบันศึกษาปอเนาะ',
         'school_type' => 'ประเภทโรงเรียน',
         'established_date' => 'จัดตั้งเมื่อ',
+        'project_name' => 'ชื่อโครงการ',
     ];
     return $labels[$field] ?? $field;
 }
