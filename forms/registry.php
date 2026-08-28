@@ -28,11 +28,15 @@
  *                      level is a genuinely independent dimension (ชาย/หญิง) that reads better on
  *                      its own than glued onto the category name.
  *   merge_extra_columns_into : optional, requires value_type 'numeric'. Set to a column_path text
- *                      (e.g. "อื่นๆ") when the template explicitly allows agencies to append extra
- *                      columns of their own past a fixed last column — instead of blocking the whole
- *                      sheet on a column-count mismatch, any trailing columns after that anchor get
- *                      summed into it. Every column up to and including the anchor must still match
- *                      the reference template exactly, or the normal structure error still fires.
+ *                      (e.g. "อื่นๆ") when the template explicitly allows agencies to add extra
+ *                      columns of their own around a fixed catch-all bucket — instead of blocking
+ *                      the whole sheet on a column-count mismatch, every column that isn't one of
+ *                      the OTHER reference columns gets summed into the bucket, no matter where it
+ *                      appears (inserted mid-list, trailing at the end, or the bucket cell itself
+ *                      renamed/removed and replaced with several of the agency's own columns — real
+ *                      files do all of these). Every other reference column must still appear
+ *                      somewhere in the file, in the same relative order — if one is genuinely
+ *                      missing (not just moved), the normal structure error still fires.
  *
  * Everything after identity_cols is stored generically as (column_path => value), where column_path
  * is the header text of every non-skipped header row for that column, joined with " / ". This is what
@@ -412,10 +416,14 @@ return [
                 'identity_fields' => $stdIdentity,
                 'value_type'      => 'numeric', // จำนวนผู้สอนแยกตามวิชาเอก (ไม่มีแยกเพศ)
                 'value_label'     => 'วิชาเอก',
-                // แม่แบบมีหมายเหตุอนุญาตให้ "แทรกคอลัมน์วิชาเอกเพิ่มเติมได้" — ถ้าหน่วยงานเพิ่ม
-                // คอลัมน์ต่อท้ายหลัง "อื่นๆ" (คอลัมน์สุดท้าย) ให้รวมค่าเข้ากับ "อื่นๆ" แทนการบล็อก
-                // ทั้งชีท (ดู Importer::tryResolveExtraTrailingColumns) — คอลัมน์ก่อนหน้ายังต้องตรง
-                // กับต้นฉบับทุกคอลัมน์เหมือนเดิม ไม่งั้นจะ error ตามปกติ
+                // แม่แบบมีหมายเหตุอนุญาตให้ "แทรกคอลัมน์วิชาเอกเพิ่มเติมได้" — ไฟล์จริงทำแบบนี้ไม่
+                // เหมือนกันเป๊ะสักไฟล์: บางไฟล์แค่ต่อท้ายหลัง "อื่นๆ", บางไฟล์แทรกคอลัมน์ใหม่แทรกกลาง
+                // รายชื่อวิชาเดิม, บางไฟล์ลบ/เปลี่ยนชื่อ "อื่นๆ" ทิ้งแล้วใส่ชื่อวิชาของตัวเองแทนหลาย
+                // คอลัมน์เลยก็มี (ตรวจสอบไฟล์จริงจากหลายหน่วยงานแล้วเจอทั้ง 3 แบบ) — ไม่ว่าจะแทรก/
+                // แทนที่ตรงไหน ทุกคอลัมน์ที่ไม่ตรงกับชื่อวิชา 24 รายการที่เหลือ (ทุกคอลัมน์ ยกเว้น
+                // "อื่นๆ" เอง) จะถูกรวมเข้ากับ "อื่นๆ" หมด (ดู Importer::tryResolveExtraColumns —
+                // จับคู่แบบ subsequence ไม่ใช่ตำแหน่งตายตัว) ยกเว้นถ้าวิชาหลักตัวใดตัวหนึ่งหายไปจริง
+                // (ไม่ใช่แค่ย้ายที่) จะยัง error ตามปกติ
                 'merge_extra_columns_into' => 'อื่นๆ',
             ],
         ],

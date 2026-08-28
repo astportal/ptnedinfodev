@@ -9,6 +9,14 @@ require_once __DIR__ . '/XlsxReader.php';
  */
 class Importer
 {
+    /**
+     * Fixed col_index used for a "merge_extra_columns_into" bucket (see tryResolveExtraColumns())
+     * — deliberately far outside any realistic real sheet width so it never collides with a real
+     * column, and kept the SAME across every upload of the sheet so Reporting::pivot() (which
+     * groups values by col_index => column_path across every submission) treats it as one column.
+     */
+    private const MERGED_COLUMN_INDEX = 999999;
+
     /** @var array<int,array<string,true>> academic_year => known school codes for that year */
     private array $knownSchoolCodesByYear = [];
 
@@ -153,22 +161,30 @@ class Importer
         // separate decision made further down, in the value-insert loop.
         $columnPaths = $this->buildColumnPaths($grid, $maxCol, $identityCols, $headerRows, $skipRows);
 
-        // Some sheets let agencies freely append extra columns past a fixed "อื่นๆ" (other) bucket
-        // (e.g. form 10.6 — the template literally says "สามารถแทรกคอลัมน์วิชาเอกเพิ่มเติมได้") — for
-        // those, don't hard-block on a column-count mismatch; instead fold any trailing columns past
-        // the anchor into it (summed) as long as every column before the anchor still matches exactly.
+        // Some sheets let agencies freely add extra columns of their own around a fixed "อื่นๆ"
+        // (other) bucket (e.g. form 10.6 — the template literally says "สามารถแทรกคอลัมน์วิชาเอก
+        // เพิ่มเติมได้") — real files do this messily in practice: columns inserted mid-list, or the
+        // "อื่นๆ" cell itself renamed/removed and replaced with several of the agency's own named
+        // columns. Don't hard-block on a column-count mismatch for those; instead fold every column
+        // that isn't one of the required subjects into "อื่นๆ" (summed), as long as every required
+        // subject still appears in the file, in order (extra columns anywhere between/around them
+        // are fine — only a genuinely missing required subject still blocks the import).
         $mergeExtraCols = null;
         if ($referenceReader !== null && in_array($sheetName, $referenceReader->sheetNames(), true)) {
             $mergeInto = $sheetDef['merge_extra_columns_into'] ?? null;
             if ($mergeInto !== null) {
                 $refData = $referenceReader->readGrid($sheetName);
                 $refPaths = $this->buildColumnPaths($refData['grid'], $refData['maxCol'], $identityCols, $headerRows, $skipRows);
-                $mergeExtraCols = $this->tryResolveExtraTrailingColumns($refPaths, $columnPaths, $mergeInto);
+                $mergeExtraCols = $this->tryResolveExtraColumns($refPaths, $columnPaths, $mergeInto);
             }
             if ($mergeExtraCols !== null) {
                 foreach ($mergeExtraCols['extra_cols'] as $ec) {
                     unset($columnPaths[$ec]);
                 }
+                // ใช้ col_index คงที่ (ไม่ชนกับคอลัมน์จริงในไฟล์ไหนเลย) เสมอทุกการอัปโหลด เพื่อให้
+                // Reporting::pivot() (รวมข้อมูลจากหลายไฟล์โดยจับคู่ col_index => column_path) มองว่า
+                // เป็นคอลัมน์เดียวกันทุกครั้ง แม้แต่ละไฟล์จะมีตำแหน่งคอลัมน์ "อื่นๆ" จริงไม่เท่ากัน
+                $columnPaths[self::MERGED_COLUMN_INDEX] = $mergeInto;
             } else {
                 $this->assertStructureMatches($referenceReader, $sheetName, $identityCols, $headerRows, $skipRows, $columnPaths);
             }
@@ -313,13 +329,10 @@ class Importer
                      VALUES (:sid, :ci, :cp, :val, :nr)'
                 );
                 foreach ($columnPaths as $c => $path) {
-                    if ($mergeExtraCols !== null && $c === $mergeExtraCols['anchor_col']) {
-                        // Anchor column ("อื่นๆ") — combine its own cell with every extra trailing
-                        // column's cell for this row (skipping any that are individually hidden).
+                    if ($mergeExtraCols !== null && $c === self::MERGED_COLUMN_INDEX) {
+                        // Combine every extra/unrecognized column's cell for this row into one
+                        // "อื่นๆ" value (skipping any that are individually hidden).
                         $rawValues = [];
-                        if (!isset($hiddenCols[$c])) {
-                            $rawValues[] = trim((string)($rowData[$c] ?? ''));
-                        }
                         foreach ($mergeExtraCols['extra_cols'] as $ec) {
                             if (isset($hiddenCols[$ec])) {
                                 continue;
@@ -421,43 +434,47 @@ class Importer
 
     /**
      * For a sheet whose sheetDef sets 'merge_extra_columns_into' (a column_path text, e.g. "อื่นๆ")
-     * — used when agencies are allowed to freely append extra columns of their own past that fixed
-     * bucket — check whether the uploaded file is exactly that shape: every column up to and
-     * including the anchor matches the reference template's column_path exactly, and there are one
-     * or more extra columns trailing after it. Returns null if the uploaded file doesn't look like
-     * that (either no extra columns, or something before/at the anchor doesn't match) — the caller
-     * then falls back to the normal hard structure check so a genuine mismatch still gets caught.
+     * — used when agencies are allowed to freely add extra columns of their own around that fixed
+     * bucket — check whether every OTHER required column (every reference column except the bucket
+     * itself) still appears in the uploaded file, in the same relative order. Matching is by
+     * subsequence, not fixed position: extra columns can appear anywhere (inserted mid-list,
+     * trailing after the bucket, or the bucket cell itself renamed/removed and replaced with the
+     * agency's own named columns — all of these happen in real files) and are all folded into the
+     * bucket. Returns null if some required column is genuinely missing (not just moved) or if the
+     * file matches the reference exactly already (nothing to merge) — the caller then runs the
+     * normal exact structure check so a genuine mismatch still gets caught.
      *
      * @param array<int,string> $refPaths col_index => column_path, from the reference template
      * @param array<int,string> $columnPaths col_index => column_path, from the uploaded file
-     * @return array{anchor_col:int, extra_cols:int[]}|null
+     * @return array{extra_cols:int[]}|null
      */
-    private function tryResolveExtraTrailingColumns(array $refPaths, array $columnPaths, string $mergeInto): ?array
+    private function tryResolveExtraColumns(array $refPaths, array $columnPaths, string $mergeInto): ?array
     {
         $normalize = static fn(string $s): string => preg_replace('/\s+/u', ' ', trim($s));
 
-        $refList = array_values($refPaths);
-        $refCount = count($refList);
-        if ($refCount === 0 || $normalize(end($refList)) !== $normalize($mergeInto)) {
-            return null; // reference's last column isn't the configured anchor — nothing to reconcile
+        if (!$refPaths || $normalize((string)end($refPaths)) !== $normalize($mergeInto)) {
+            return null; // reference doesn't end in the configured bucket — nothing to reconcile
         }
+        $refCore = $refPaths;
+        array_pop($refCore); // every required column EXCEPT the bucket itself
+        $refCoreList = array_values($refCore);
+        $coreCount = count($refCoreList);
 
-        $uploadedCols = array_keys($columnPaths); // ascending col_index, per buildColumnPaths() order
-        if (count($uploadedCols) <= $refCount) {
-            return null; // no extra columns to merge
-        }
-
-        for ($i = 0; $i < $refCount; $i++) {
-            $c = $uploadedCols[$i];
-            if ($normalize($columnPaths[$c]) !== $normalize($refList[$i])) {
-                return null; // mismatch before/at the anchor — not our special case
+        $i = 0;
+        $extraCols = [];
+        foreach ($columnPaths as $c => $text) {
+            if ($i < $coreCount && $normalize($text) === $normalize($refCoreList[$i])) {
+                $i++;
+                continue;
             }
+            $extraCols[] = $c;
         }
 
-        return [
-            'anchor_col' => $uploadedCols[$refCount - 1],
-            'extra_cols' => array_slice($uploadedCols, $refCount),
-        ];
+        if ($i < $coreCount || !$extraCols) {
+            return null; // a required column is genuinely missing, or nothing needs merging
+        }
+
+        return ['extra_cols' => $extraCols];
     }
 
     /**
