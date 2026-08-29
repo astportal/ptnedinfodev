@@ -322,14 +322,22 @@ function render_report_start(string $activePage): void
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="field">
-            <label>แยกตามมิติ</label>
-            <select name="dim" onchange="this.form.submit()">
-              <?php foreach ($dimensions as $key => $label): ?>
-                <option value="<?= h($key) ?>" <?= $selectedDimension === $key ? 'selected' : '' ?>><?= h($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+          <?php if ($activePage === 'table'): ?>
+            <div class="field">
+              <label>แยกตามมิติ</label>
+              <select name="dim" onchange="this.form.submit()">
+                <?php foreach ($dimensions as $key => $label): ?>
+                  <option value="<?= h($key) ?>" <?= $selectedDimension === $key ? 'selected' : '' ?>><?= h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php else: ?>
+            <?php // หน้ากราฟไม่มี dropdown มิตินี้ (กราฟส่วนใหญ่ตรึงมิติไว้ตายตัวอยู่แล้ว มีไว้จะทำให้
+            // สับสนว่าเปลี่ยนแล้วกราฟจะเปลี่ยนตามหรือไม่) แต่ยังส่งค่ามิติที่เคยเลือกไว้จากหน้าตาราง
+            // ต่อไปด้วย เผื่อผู้ใช้งานเปลี่ยนปีการศึกษาที่หน้านี้แล้วสลับกลับไปหน้าตาราง จะได้ไม่รีเซ็ต
+            // มิติที่เคยเลือกไว้ ?>
+            <input type="hidden" name="dim" value="<?= h($selectedDimension) ?>">
+          <?php endif; ?>
         </form>
       </div>
     <?php
