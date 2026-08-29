@@ -194,19 +194,21 @@ sort($agencyOptions, SORT_STRING | SORT_FLAG_CASE);
 sort($amphoeOptions, SORT_STRING | SORT_FLAG_CASE);
 
 // ค้นหา/กรอง — ใช้ร่วมกันทั้งหน้าเว็บและ CSV export (export ที่ดาวน์โหลดจะตรงกับสิ่งที่กำลังดูอยู่
-// บนหน้าเว็บเสมอ) ค้นชื่อสถานศึกษาแบบ substring ไม่สนตัวพิมพ์เล็ก/ใหญ่ ส่วนสังกัด/อำเภอเป็น dropdown
-// เลือกค่าตรงตัวเป๊ะ (ไม่ใช่ substring) — ใช้ stripos() ธรรมดา ไม่ใช้ mb_stripos() เพราะภาษาไทยไม่มี
-// ตัวพิมพ์เล็ก/ใหญ่ให้ต้องแปลง และ strpos() ตระกูลนี้ทำงานถูกต้องกับ substring ของสตริง UTF-8 อยู่แล้ว
-// (ไม่ต้องพึ่ง extension mbstring ซึ่งไม่เคยมีจุดไหนในระบบนี้ใช้มาก่อนเลย ไม่อยากเพิ่ม dependency ใหม่)
+// บนหน้าเว็บเสมอ) ค้นชื่อสถานศึกษาแบบ substring ไม่สนตัวพิมพ์เล็ก/ใหญ่ — ใช้ stripos() ธรรมดา ไม่ใช้
+// mb_stripos() เพราะภาษาไทยไม่มีตัวพิมพ์เล็ก/ใหญ่ให้ต้องแปลง และ strpos() ตระกูลนี้ทำงานถูกต้องกับ
+// substring ของสตริง UTF-8 อยู่แล้ว (ไม่ต้องพึ่ง extension mbstring ซึ่งไม่เคยมีจุดไหนในระบบนี้ใช้
+// มาก่อนเลย ไม่อยากเพิ่ม dependency ใหม่) — สังกัด/หน่วยงาน เลือกได้หลายรายการพร้อมกัน (multi-select
+// dropdown, `<select multiple name="agency[]">`) ตามคำขอผู้ใช้งาน 2026-08-29 ส่วนอำเภอยังเลือกได้
+// รายการเดียว (ผู้ใช้ขอเจาะจงแค่ตัวสังกัด/หน่วยงาน)
 $searchName = trim($_GET['q'] ?? '');
-$filterAgency = trim($_GET['agency'] ?? '');
+$filterAgency = array_values(array_filter(array_map('trim', (array)($_GET['agency'] ?? []))));
 $filterAmphoe = trim($_GET['amphoe'] ?? '');
-if ($searchName !== '' || $filterAgency !== '' || $filterAmphoe !== '') {
+if ($searchName !== '' || $filterAgency || $filterAmphoe !== '') {
     $gradeTableRows = array_values(array_filter($gradeTableRows, static function ($r) use ($searchName, $filterAgency, $filterAmphoe) {
         if ($searchName !== '' && stripos($r['school_name'], $searchName) === false) {
             return false;
         }
-        if ($filterAgency !== '' && $r['agency_name'] !== $filterAgency) {
+        if ($filterAgency && !in_array($r['agency_name'], $filterAgency, true)) {
             return false;
         }
         if ($filterAmphoe !== '' && $r['amphoe'] !== $filterAmphoe) {

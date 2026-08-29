@@ -48,11 +48,10 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
           <input type="text" name="q" value="<?= h($searchName) ?>" placeholder="เช่น บ้านตลาด">
         </div>
         <div class="field">
-          <label>สังกัด/หน่วยงาน</label>
-          <select name="agency">
-            <option value="">— ทั้งหมด —</option>
+          <label>สังกัด/หน่วยงาน (เลือกได้หลายรายการ — กด Ctrl หรือ Cmd ค้างไว้แล้วคลิกเพื่อเลือกเพิ่ม)</label>
+          <select name="agency[]" multiple size="6">
             <?php foreach ($agencyOptions as $opt): ?>
-              <option value="<?= h($opt) ?>" <?= $filterAgency === $opt ? 'selected' : '' ?>><?= h($opt) ?></option>
+              <option value="<?= h($opt) ?>" <?= in_array($opt, $filterAgency, true) ? 'selected' : '' ?>><?= h($opt) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
