@@ -13,7 +13,7 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อความไทยถูกต้อง
 
-// ระดับชั้น, "ผู้เรียน สกร." และ "ผู้เรียนนอกระบบ" แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
+// ระดับชั้น, "ผู้เรียน สกร.", "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
 $header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
@@ -23,6 +23,8 @@ $header[] = 'ผู้เรียน สกร. (ชาย)';
 $header[] = 'ผู้เรียน สกร. (หญิง)';
 $header[] = 'ผู้เรียนนอกระบบ (ชาย)';
 $header[] = 'ผู้เรียนนอกระบบ (หญิง)';
+$header[] = 'พมจ. (ชาย)';
+$header[] = 'พมจ. (หญิง)';
 fputcsv($out, $header);
 
 foreach ($gradeTableRows as $row) {
@@ -35,6 +37,8 @@ foreach ($gradeTableRows as $row) {
     $line[] = $row['nfe_total']['female'];
     $line[] = $row['private_nonformal_total']['male'];
     $line[] = $row['private_nonformal_total']['female'];
+    $line[] = $row['pmj_total']['male'];
+    $line[] = $row['pmj_total']['female'];
     fputcsv($out, $line);
 }
 

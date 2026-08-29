@@ -95,6 +95,16 @@ $privateNonformalSheets = [
     ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนนักเรียน / ชาย', 'จำนวนนักเรียน / หญิง']],
 ];
 
+// เด็กที่สถานรับเลี้ยงเด็กเอกชนสังกัด พมจ. (ฟอร์ม 16.2) — เฉพาะคอลัมน์ "จำนวนเด็ก..." เท่านั้น (ไม่รวม
+// "จำนวนผู้ดูแลเด็ก..." ในชีทเดียวกัน ซึ่งเป็นข้อมูลครู/ผู้ดูแล ไม่ใช่ผู้เรียน) — เพิ่มเมื่อ 2026-08-30
+// ตามคำขอผู้ใช้งาน สถานศึกษากลุ่มนี้จับคู่ school_code ด้วยชื่อกับทำเนียบโรงเรียนอัตโนมัติ (ดู
+// match_school_code_by_name ใน forms/registry.php + Importer::schoolCodesByName()) แถวที่จับคู่
+// ไม่ได้จะไม่มี school_code เลยและจะไม่ปรากฏในตารางนี้ (เหมือนแถวที่ขาด school_code ของฟอร์มอื่น)
+$pmjColumns = [
+    'จำนวนเด็กช่วงอายุ 0-2 ปี / ชาย', 'จำนวนเด็กช่วงอายุ 0-2 ปี / หญิง',
+    'จำนวนเด็กช่วงอายุ 3-5 ปี / ชาย', 'จำนวนเด็กช่วงอายุ 3-5 ปี / หญิง',
+];
+
 /** แถวว่างเปล่า 1 แถว (ทุกระดับชั้น = 0) ให้เติมตอนพบ school_code ใหม่จากฟอร์ม 11/15 ที่ฟอร์ม 4 ไม่มี */
 function grade_table_blank_row(string $schoolCode, string $schoolName, string $agencyName, string $amphoe, array $gradeLabels): array
 {
@@ -105,6 +115,7 @@ function grade_table_blank_row(string $schoolCode, string $schoolName, string $a
         'amphoe'      => $amphoe,
         'nfe_total'   => ['male' => 0.0, 'female' => 0.0],
         'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
+        'pmj_total'   => ['male' => 0.0, 'female' => 0.0],
     ];
     foreach ($gradeLabels as $label) {
         $row['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
@@ -187,15 +198,42 @@ foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
     }
 }
 
+// 4) ฟอร์ม 16.2 (เด็กสถานรับเลี้ยงเด็กเอกชนสังกัด พมจ.) — โรงเรียนคนละกลุ่มกับฟอร์ม 4 เช่นกัน (ไม่มี
+// อยู่ในฟอร์ม 4 เลย) ต้อง join ด้วย school_code ที่จับคู่จากชื่อไว้แล้วตอน import (ดู
+// match_school_code_by_name) แถวที่จับคู่ไม่สำเร็จจะไม่มี school_code เลย ข้ามไปเหมือนแถวที่ขาด
+// school_code ของฟอร์มอื่นทุกประการ (ผู้ใช้ต้องไปแก้ที่หน้า "รายการที่ต้องตรวจสอบ" ก่อนถึงจะขึ้นที่นี่)
+$pivot16 = $reporting->pivot('16_pmj', 'พมจ-16.2', $selectedYear);
+foreach ($pivot16['rows'] as $r) {
+    $code = trim((string)($r['school_code'] ?? ''));
+    if ($code === '') {
+        continue;
+    }
+    if (!isset($rowsByCode[$code])) {
+        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
+    }
+    foreach ($pmjColumns as $path) {
+        $v = $r[$path] ?? '';
+        if ($v === '' || !is_numeric($v)) {
+            continue;
+        }
+        if (preg_match('/ชาย$/u', $path)) {
+            $rowsByCode[$code]['pmj_total']['male'] += (float)$v;
+        } elseif (preg_match('/หญิง$/u', $path)) {
+            $rowsByCode[$code]['pmj_total']['female'] += (float)$v;
+        }
+    }
+}
+
 $gradeTableRows = array_values($rowsByCode);
 usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school_name']));
 
 // คอลัมน์ "รวม" ต่อสถานศึกษา — ผลรวมทุกระดับชั้น (ชาย+หญิง) + ผู้เรียน สกร. (ชาย+หญิง) + ผู้เรียน
-// นอกระบบ คำนวณครั้งเดียวตรงนี้หลังข้อมูลทุกแหล่ง (ฟอร์ม 4/11/15) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้
-// ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณแทรกในแต่ละ pass ข้างบน
+// นอกระบบ (ชาย+หญิง) + พมจ. (ชาย+หญิง) คำนวณครั้งเดียวตรงนี้หลังข้อมูลทุกแหล่ง (ฟอร์ม 4/11/15/16)
+// รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณแทรกในแต่ละ pass ข้างบน
 foreach ($gradeTableRows as &$gtRow) {
     $grandTotal = $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female']
-        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female'];
+        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female']
+        + $gtRow['pmj_total']['male'] + $gtRow['pmj_total']['female'];
     foreach ($gradeLabels as $label) {
         $grandTotal += $gtRow['grades'][$label]['male'] + $gtRow['grades'][$label]['female'];
     }
@@ -251,6 +289,7 @@ $gradeTotals = [
     'grades' => [],
     'nfe_total' => ['male' => 0.0, 'female' => 0.0],
     'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
+    'pmj_total' => ['male' => 0.0, 'female' => 0.0],
     'grand_total' => 0.0,
 ];
 foreach ($gradeLabels as $label) {
@@ -265,6 +304,8 @@ foreach ($gradeTableRows as $r) {
     $gradeTotals['nfe_total']['female'] += $r['nfe_total']['female'];
     $gradeTotals['private_nonformal_total']['male'] += $r['private_nonformal_total']['male'];
     $gradeTotals['private_nonformal_total']['female'] += $r['private_nonformal_total']['female'];
+    $gradeTotals['pmj_total']['male'] += $r['pmj_total']['male'];
+    $gradeTotals['pmj_total']['female'] += $r['pmj_total']['female'];
     $gradeTotals['grand_total'] += $r['grand_total'];
 }
 
