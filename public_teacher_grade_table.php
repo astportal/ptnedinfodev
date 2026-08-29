@@ -22,9 +22,9 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
   <nav>
     <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>">ตารางสรุปยอดรวม</a>
-    <a href="public_school_search.php?<?= h($navQuery) ?>">ค้นหารหัสสถานศึกษา</a>
     <a href="public_school_grade_table.php?<?= h($navQuery) ?>">ผู้เรียนรายชั้น</a>
     <a href="public_teacher_grade_table.php?<?= h($navQuery) ?>" class="active">ครูผู้สอน</a>
+    <a href="public_school_search.php?<?= h($navQuery) ?>">ค้นหารหัสสถานศึกษา</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
