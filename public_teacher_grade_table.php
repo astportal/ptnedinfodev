@@ -1,17 +1,18 @@
 <?php
 /**
- * ตารางผู้เรียนรายชั้น 1 แถวต่อสถานศึกษา — หน้าเปิดเผยต่อสาธารณะ ไม่ต้อง login เหมือนหน้าสาธารณะ
- * อื่น ๆ ตามคำขอผู้ใช้งาน 2026-08-29 ดูรายละเอียดที่มาของข้อมูล/เหตุผลออกแบบใน
- * public_school_grade_table_data.php และ ai_note.md
+ * ตารางครูผู้สอนรายชั้น 1 แถวต่อสถานศึกษา — หน้าเปิดเผยต่อสาธารณะ ไม่ต้อง login เหมือนหน้าสาธารณะ
+ * อื่น ๆ ตามคำขอผู้ใช้งาน 2026-08-29 ("ทำตารางแบบนี้กับข้อมูล 'ครูผู้สอน'" — คู่กับตารางผู้เรียน
+ * รายชั้นที่ public_school_grade_table.php) ดูรายละเอียดที่มาของข้อมูล/เหตุผลออกแบบใน
+ * public_teacher_grade_table_data.php และ ai_note.md
  */
-require_once __DIR__ . '/public_school_grade_table_data.php';
+require_once __DIR__ . '/public_teacher_grade_table_data.php';
 ?>
 <!doctype html>
 <html lang="th">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ตารางผู้เรียนรายชั้น — ptnedinfo</title>
+<title>ตารางครูผู้สอนรายชั้น — ptnedinfo</title>
 <link rel="stylesheet" href="public/assets/style.css">
 <link rel="stylesheet" href="public/assets/public_report.css">
 </head>
@@ -22,15 +23,15 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
     <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม (กราฟ)</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_search.php?<?= h($navQuery) ?>">ค้นหารหัสสถานศึกษา</a>
-    <a href="public_school_grade_table.php?<?= h($navQuery) ?>" class="active">ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?<?= h($navQuery) ?>">ครูผู้สอนรายชั้น</a>
+    <a href="public_school_grade_table.php?<?= h($navQuery) ?>">ผู้เรียนรายชั้น</a>
+    <a href="public_teacher_grade_table.php?<?= h($navQuery) ?>" class="active">ครูผู้สอนรายชั้น</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
 <div class="container" style="max-width: 98vw;">
   <div class="report-main">
     <div class="card">
-      <h1>ตารางผู้เรียนรายชั้น ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
+      <h1>ตารางครูผู้สอนรายชั้น ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
 
       <form method="get" class="filter-bar">
         <div class="field">
@@ -64,7 +65,7 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
         </div>
         <button class="btn" type="submit">ค้นหา</button>
       </form>
-      <p><a class="btn btn-secondary" href="public_school_grade_table_export.php?<?= h(http_build_query(['year' => $selectedYear, 'q' => $searchName, 'agency' => $filterAgency, 'amphoe' => $filterAmphoe])) ?>" style="display:inline-block;">ดาวน์โหลด CSV (ตามผลค้นหาปัจจุบัน)</a></p>
+      <p><a class="btn btn-secondary" href="public_teacher_grade_table_export.php?<?= h(http_build_query(['year' => $selectedYear, 'q' => $searchName, 'agency' => $filterAgency, 'amphoe' => $filterAmphoe])) ?>" style="display:inline-block;">ดาวน์โหลด CSV (ตามผลค้นหาปัจจุบัน)</a></p>
     </div>
 
     <div class="card">
@@ -84,8 +85,8 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                 <?php foreach ($gradeLabels as $label): ?>
                   <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
                 <?php endforeach; ?>
-                <th class="num" colspan="2" style="text-align:center;">ผู้เรียน สกร.</th>
-                <th class="num" rowspan="2">ผู้เรียนนอกระบบ</th>
+                <th class="num" colspan="2" style="text-align:center;">ครู ศพด.</th>
+                <th class="num" rowspan="2">ครูนอกระบบ</th>
               </tr>
               <tr>
                 <?php foreach ($gradeLabels as $label): ?>
@@ -104,8 +105,8 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['male']) ?></td>
                   <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['female']) ?></td>
                 <?php endforeach; ?>
-                <td class="num"><?= fmt_num($gradeTotals['nfe_total']['male']) ?></td>
-                <td class="num"><?= fmt_num($gradeTotals['nfe_total']['female']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['childcare_total']['male']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['childcare_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']) ?></td>
               </tr>
               <?php foreach ($gradeTableRows as $row): ?>
@@ -119,8 +120,8 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                     <td class="num"><?= fmt_num($row['grades'][$label]['male']) ?></td>
                     <td class="num"><?= fmt_num($row['grades'][$label]['female']) ?></td>
                   <?php endforeach; ?>
-                  <td class="num"><?= fmt_num($row['nfe_total']['male']) ?></td>
-                  <td class="num"><?= fmt_num($row['nfe_total']['female']) ?></td>
+                  <td class="num"><?= fmt_num($row['childcare_total']['male']) ?></td>
+                  <td class="num"><?= fmt_num($row['childcare_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']) ?></td>
                 </tr>
               <?php endforeach; ?>
