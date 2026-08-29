@@ -40,6 +40,7 @@ $currentYear = Settings::currentAcademicYear($db);
     <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <a href="schools_master.php">ทำเนียบโรงเรียน</a>
+    <a href="school_search.php">ค้นหารหัสสถานศึกษา</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
   </nav>

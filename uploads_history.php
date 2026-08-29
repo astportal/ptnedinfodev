@@ -104,6 +104,7 @@ function form_label_for(array $forms, string $key): string
     <a href="index.php">แดชบอร์ด</a>
     <a href="review.php">รายการที่ต้องตรวจสอบ</a>
     <a href="schools_master.php">ทำเนียบโรงเรียน</a>
+    <a href="school_search.php">ค้นหารหัสสถานศึกษา</a>
     <a href="settings.php">ตั้งค่า</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
