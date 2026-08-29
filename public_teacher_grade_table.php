@@ -1,9 +1,9 @@
 <?php
 /**
- * ตารางครูผู้สอนรายชั้น 1 แถวต่อสถานศึกษา — หน้าเปิดเผยต่อสาธารณะ ไม่ต้อง login เหมือนหน้าสาธารณะ
- * อื่น ๆ ตามคำขอผู้ใช้งาน 2026-08-29 ("ทำตารางแบบนี้กับข้อมูล 'ครูผู้สอน'" — คู่กับตารางผู้เรียน
- * รายชั้นที่ public_school_grade_table.php) ดูรายละเอียดที่มาของข้อมูล/เหตุผลออกแบบใน
- * public_teacher_grade_table_data.php และ ai_note.md
+ * ตารางครูผู้สอน 1 แถวต่อสถานศึกษา แยกชาย/หญิง — หน้าเปิดเผยต่อสาธารณะ ไม่ต้อง login เหมือนหน้า
+ * สาธารณะอื่น ๆ ดูรายละเอียดที่มาของข้อมูล/เหตุผลออกแบบใน public_teacher_grade_table_data.php และ
+ * ai_note.md (ปรับโครงสร้างเมื่อ 2026-08-29 — เดิมแยกตามระดับชั้นที่สอน เปลี่ยนเป็นยอดรวมครูผู้สอน
+ * เดียว แยกชาย/หญิง ตามคำขอผู้ใช้งาน จึงไม่มี 2-row header/colspan แบบตารางผู้เรียนรายชั้นแล้ว)
  */
 require_once __DIR__ . '/public_teacher_grade_table_data.php';
 ?>
@@ -12,7 +12,7 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ตารางครูผู้สอนรายชั้น — ptnedinfo</title>
+<title>ตารางครูผู้สอน — ptnedinfo</title>
 <link rel="stylesheet" href="public/assets/style.css">
 <link rel="stylesheet" href="public/assets/public_report.css">
 </head>
@@ -31,7 +31,7 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
 <div class="container" style="max-width: 98vw;">
   <div class="report-main">
     <div class="card">
-      <h1>ตารางครูผู้สอนรายชั้น ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
+      <h1>ตารางครูผู้สอน ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
 
       <form method="get" class="filter-bar">
         <div class="field">
@@ -74,37 +74,27 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
       <?php else: ?>
         <p class="muted">พบ <?= count($gradeTableRows) ?> สถานศึกษา</p>
         <div class="report-table-scroll">
-          <table class="stats-table two-row-header">
+          <table class="stats-table">
             <thead>
               <tr>
-                <th rowspan="2">รหัสสถานศึกษา</th>
-                <th rowspan="2">ชื่อสถานศึกษา</th>
-                <th rowspan="2">สังกัด/หน่วยงาน</th>
-                <th rowspan="2">อำเภอ</th>
-                <th class="num" rowspan="2">รวม</th>
-                <?php foreach ($gradeLabels as $label): ?>
-                  <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
-                <?php endforeach; ?>
-                <th class="num" colspan="2" style="text-align:center;">ครู ศพด.</th>
-                <th class="num" rowspan="2">ครูนอกระบบ</th>
-              </tr>
-              <tr>
-                <?php foreach ($gradeLabels as $label): ?>
-                  <th class="num">ชาย</th>
-                  <th class="num">หญิง</th>
-                <?php endforeach; ?>
-                <th class="num">ชาย</th>
-                <th class="num">หญิง</th>
+                <th>รหัสสถานศึกษา</th>
+                <th>ชื่อสถานศึกษา</th>
+                <th>สังกัด/หน่วยงาน</th>
+                <th>อำเภอ</th>
+                <th class="num">รวม</th>
+                <th class="num">ครูผู้สอน (ชาย)</th>
+                <th class="num">ครูผู้สอน (หญิง)</th>
+                <th class="num">ครู ศพด. (ชาย)</th>
+                <th class="num">ครู ศพด. (หญิง)</th>
+                <th class="num">ครูนอกระบบ</th>
               </tr>
             </thead>
             <tbody>
               <tr class="row-total">
                 <td colspan="4">รวม (ตามผลค้นหาปัจจุบัน)</td>
                 <td class="num"><?= fmt_num($gradeTotals['grand_total']) ?></td>
-                <?php foreach ($gradeLabels as $label): ?>
-                  <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['male']) ?></td>
-                  <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['female']) ?></td>
-                <?php endforeach; ?>
+                <td class="num"><?= fmt_num($gradeTotals['teaching_total']['male']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['teaching_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']) ?></td>
@@ -116,10 +106,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                   <td><?= h($row['agency_name']) ?></td>
                   <td><?= h($row['amphoe']) ?></td>
                   <td class="num"><?= fmt_num($row['grand_total']) ?></td>
-                  <?php foreach ($gradeLabels as $label): ?>
-                    <td class="num"><?= fmt_num($row['grades'][$label]['male']) ?></td>
-                    <td class="num"><?= fmt_num($row['grades'][$label]['female']) ?></td>
-                  <?php endforeach; ?>
+                  <td class="num"><?= fmt_num($row['teaching_total']['male']) ?></td>
+                  <td class="num"><?= fmt_num($row['teaching_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['childcare_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['childcare_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']) ?></td>
