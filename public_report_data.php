@@ -335,6 +335,7 @@ function render_report_start(string $activePage): void
     <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
+    <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'grades' ? 'active' : '' ?>">ผู้เรียนรายชั้น</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
