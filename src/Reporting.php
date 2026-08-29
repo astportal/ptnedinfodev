@@ -66,11 +66,29 @@ class Reporting
      * pivot() itself). Used to build province-wide headline totals for the public statistics
      * page (public_report.php). Only wire a sheet in here if it's been checked by hand against
      * reference_templates/ to have no baked-in "รวม"-style subtotal column mixed in with the raw
-     * categories — summing those together would double-count.
+     * categories — summing those together would double-count (use groupedTotalForColumns()
+     * instead for a sheet like that, naming just the column(s) that are actually safe to add).
      *
      * @return array<string,float> dimension value (or "ไม่ระบุ" if blank) => sum
      */
     public function groupedTotal(string $formKey, string $sheetName, string $dimension, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        return $this->groupedTotalForColumns($formKey, $sheetName, $pivot['columns'], $dimension, $academicYear);
+    }
+
+    /**
+     * Same as groupedTotal() but only sums the given column_path(s) instead of every value column
+     * on the sheet — for a sheet that mixes several different topics together in one table (e.g.
+     * form 14's "14.ข้อมูลศูนย์พัฒนาเด็กเล็ก" has both เด็กเล็ก counts AND ครู/ผู้ดูแลเด็ก counts in
+     * the same row; summing every column would add children and teachers together). Pass just the
+     * column_path(s) that represent the metric you actually want (e.g. the sheet's own baked-in
+     * "รวมทั้งสิ้น" subtotal column, instead of re-summing its parts and double-counting).
+     *
+     * @param string[] $columnPaths
+     * @return array<string,float> dimension value (or "ไม่ระบุ" if blank) => sum
+     */
+    public function groupedTotalForColumns(string $formKey, string $sheetName, array $columnPaths, string $dimension, ?int $academicYear = null): array
     {
         $pivot = $this->pivot($formKey, $sheetName, $academicYear);
         $totals = [];
@@ -80,7 +98,7 @@ class Reporting
                 $group = 'ไม่ระบุ';
             }
             $sum = 0.0;
-            foreach ($pivot['columns'] as $path) {
+            foreach ($columnPaths as $path) {
                 $v = $row[$path] ?? '';
                 if ($v !== '' && is_numeric($v)) {
                     $sum += (float)$v;

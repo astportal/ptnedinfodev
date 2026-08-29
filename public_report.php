@@ -40,7 +40,12 @@ if (!isset($dimensions[$selectedDimension])) {
 $metrics = [
     'schools' => ['label' => 'จำนวนสถานศึกษา (แห่ง)'],
     'students' => ['label' => 'จำนวนนักเรียน/ผู้เรียน (คน)', 'sheets' => [
-        ['4_students', '4.จำนวนผู้เรียน'],
+        ['4_students', '4.จำนวนผู้เรียน', null],
+        // เด็กเล็กในศูนย์พัฒนาเด็กเล็ก/สถานพัฒนาเด็กปฐมวัย (ฟอร์ม 14) ไม่ได้กรอกในฟอร์ม 4 — รวมเข้า
+        // มาด้วยตามคำขอผู้ใช้งาน (2026-08-29) แต่ต้องระบุคอลัมน์ "รวมทั้งสิ้น" อย่างเดียวเท่านั้น
+        // (ไม่ใช่ทุกคอลัมน์) เพราะชีทนี้มีคอลัมน์จำนวนครู/ผู้ดูแลเด็กปนอยู่ด้วย ถ้ารวมทุกคอลัมน์จะ
+        // เอาจำนวนครูมาบวกกับจำนวนเด็กผิด ๆ
+        ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', ['รวมทั้งสิ้น']],
     ]],
     'classrooms' => ['label' => 'จำนวนห้องเรียน (ห้อง)', 'sheets' => [
         ['3_classrooms', '3.จำนวนห้องเรียน'],
@@ -71,8 +76,13 @@ foreach ($metrics as $key => $m) {
         $totals = $reporting->schoolCountByDimension($selectedDimension, $selectedYear);
     } else {
         $totals = [];
-        foreach ($m['sheets'] as [$formKey, $sheetName]) {
-            foreach ($reporting->groupedTotal($formKey, $sheetName, $selectedDimension, $selectedYear) as $g => $v) {
+        foreach ($m['sheets'] as $sheet) {
+            [$formKey, $sheetName] = $sheet;
+            $onlyColumns = $sheet[2] ?? null; // null = sum every value column (see groupedTotal())
+            $sheetTotals = $onlyColumns !== null
+                ? $reporting->groupedTotalForColumns($formKey, $sheetName, $onlyColumns, $selectedDimension, $selectedYear)
+                : $reporting->groupedTotal($formKey, $sheetName, $selectedDimension, $selectedYear);
+            foreach ($sheetTotals as $g => $v) {
                 $totals[$g] = ($totals[$g] ?? 0) + $v;
             }
         }
