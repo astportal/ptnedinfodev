@@ -24,7 +24,7 @@ class Reporting
      * lists) can apply the same override consistently instead of showing the raw uploaded value.
      *
      * @param array<int,array<string,mixed>> $submissions rows from the `submissions` table
-     * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string,department:?string}> keyed "{academic_year}|{school_code}"
+     * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string,department:?string,education_form:?string}> keyed "{academic_year}|{school_code}"
      */
     public function schoolMasterOverrides(array $submissions): array
     {
@@ -45,17 +45,29 @@ class Reporting
             foreach ($codesByYear as $year => $codes) {
                 $codeList = array_keys($codes);
                 $placeholders = implode(',', array_fill(0, count($codeList), '?'));
-                $stmt = $this->db->prepare(
-                    "SELECT school_code, amphoe, tambon, area_name, department FROM schools_master
-                     WHERE academic_year = ? AND school_code IN ($placeholders)"
-                );
-                $stmt->execute(array_merge([$year], $codeList));
+                try {
+                    // education_form (migration 005) — เผื่อยังไม่ได้รันบนเซิร์ฟเวอร์นี้
+                    $stmt = $this->db->prepare(
+                        "SELECT school_code, amphoe, tambon, area_name, department, education_form FROM schools_master
+                         WHERE academic_year = ? AND school_code IN ($placeholders)"
+                    );
+                    $stmt->execute(array_merge([$year], $codeList));
+                } catch (Throwable $e) {
+                    // คอลัมน์ education_form ยังไม่มี (migration 005 ยังไม่ได้รัน) — ใช้ query เดิม
+                    // แทน กัน override อื่น ๆ (amphoe/tambon/area_name/department) ที่ทำงานอยู่แล้ว
+                    // ไม่ให้พังไปด้วยทั้งที่ตารางมีอยู่จริง
+                    $stmt = $this->db->prepare(
+                        "SELECT school_code, amphoe, tambon, area_name, department FROM schools_master
+                         WHERE academic_year = ? AND school_code IN ($placeholders)"
+                    );
+                    $stmt->execute(array_merge([$year], $codeList));
+                }
                 while ($row = $stmt->fetch()) {
                     $overrides["{$year}|{$row['school_code']}"] = $row;
                 }
             }
         } catch (Throwable $e) {
-            return []; // ยังไม่ได้รัน migration 003 บนเซิร์ฟเวอร์นี้ — ไม่มีทำเนียบให้ใช้ ข้ามไปเงียบ ๆ
+            return []; // ยังไม่ได้รัน migration 003 บนเซิร์ฟเวอร์นี้เลย — ไม่มีทำเนียบให้ใช้ ข้ามไปเงียบ ๆ
         }
         return $overrides;
     }
@@ -310,6 +322,10 @@ class Reporting
                 'tambon'        => ($master['tambon'] ?? '') !== '' ? $master['tambon'] : $s['tambon'],
                 // ต้นสังกัด — ไม่มีคอลัมน์นี้ในไฟล์สำรวจฟอร์มไหนเลย มาจากทำเนียบโรงเรียนเท่านั้น
                 'department'    => $master['department'] ?? '',
+                // รูปแบบการศึกษา (เช่น "ในระบบ") — เหมือนต้นสังกัด ไม่มีคอลัมน์นี้ในไฟล์สำรวจฟอร์ม
+                // ไหนเลย มาจากทำเนียบโรงเรียนเท่านั้น (migration 005 — อาจเป็น '' ถ้าทำเนียบยังไม่มี
+                // คอลัมน์นี้ หรือโรงเรียนนั้นไม่มีค่านี้ในทำเนียบ)
+                'education_form' => $master['education_form'] ?? '',
                 'academic_year' => $s['academic_year'],
                 '_needs_review' => [],
             ];

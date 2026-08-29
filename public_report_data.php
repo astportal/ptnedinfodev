@@ -200,6 +200,13 @@ $studentsByAmphoe = compute_metric_totals($reporting, 'students', $metrics['stud
 arsort($studentsByDept);
 arsort($studentsByAmphoe);
 
+// จำนวนนักเรียนแยกตามรูปแบบการศึกษา (เช่น "ในระบบ") — มาจากทำเนียบโรงเรียน (schools_master,
+// migration 005) ไม่มีคอลัมน์นี้ในไฟล์สำรวจฟอร์มไหนเลย เหมือนต้นสังกัด — เพิ่มเมื่อ 2026-08-30 ตาม
+// คำขอผู้ใช้งาน ถ้าทำเนียบยังไม่มีคอลัมน์นี้ (migration 005 ยังไม่รัน) หรือโรงเรียนไหนไม่มีค่านี้ใน
+// ทำเนียบ จะรวมอยู่ใต้ "ไม่ระบุ" (พฤติกรรมเดียวกับมิติอื่นทุกมิติ — ดู groupedTotalForColumns())
+$studentsByEducationForm = compute_metric_totals($reporting, 'students', $metrics['students'], 'education_form', $selectedYear);
+arsort($studentsByEducationForm);
+
 // สัดส่วนนักเรียนชาย:หญิง — ใช้คอลัมน์ชุดเดียวกับตัวเลข "จำนวนนักเรียน" ด้านบนทุกประการ แต่ใช้คอลัมน์
 // แยกเพศดิบแทนคอลัมน์ "รวม"/"รวมทั้งสิ้น" (ซึ่งไม่มีเพศให้แยก) — ดู Reporting::genderTotalsForColumns
 $genderSheets = [

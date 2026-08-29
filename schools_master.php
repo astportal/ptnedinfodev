@@ -11,14 +11,20 @@ $flashType = 'ok';
 // สลับลำดับคอลัมน์ได้ — ชื่อ header เหล่านี้อ้างอิงจากไฟล์ทำเนียบโรงเรียนตัวอย่างจริงที่ใช้อยู่
 // YearEdu ใช้ระบุปีการศึกษาของไฟล์นี้โดยอัตโนมัติ ไม่ต้องให้แอดมินกรอกเอง
 $columnMap = [
-    'academic_year' => 'YearEdu',
-    'school_code'   => 'SchoolCode',
-    'school_name'   => 'SchoolName',
-    'tambon'        => 'SubDistrictNameThai',
-    'amphoe'        => 'DistrictNameThai',
-    'province'      => 'ProvinceNameTH',
-    'department'    => 'DepartmentNameThai',
-    'area_name'     => 'AreaName',
+    'academic_year'  => 'YearEdu',
+    'school_code'    => 'SchoolCode',
+    'school_name'    => 'SchoolName',
+    'tambon'         => 'SubDistrictNameThai',
+    'amphoe'         => 'DistrictNameThai',
+    'province'       => 'ProvinceNameTH',
+    'department'     => 'DepartmentNameThai',
+    'area_name'      => 'AreaName',
+    // "รูปแบบการศึกษา" (เช่น "ในระบบ") — พบในไฟล์ทำเนียบฉบับใหม่ (SchoolDetail_2569.xlsx) ที่ไฟล์
+    // เดิมไม่มีคอลัมน์นี้ — เพิ่มเมื่อ 2026-08-30 ใช้ทำกราฟ "จำนวนผู้เรียนแยกตามรูปแบบการศึกษา"
+    // (ดู migrations/005_school_education_form.sql) เป็น optional เหมือนคอลัมน์อื่น ๆ ยกเว้น
+    // school_code/school_name — ไฟล์ทำเนียบเก่าที่ไม่มีคอลัมน์นี้ยังอัปโหลดได้ปกติ แค่ค่านี้จะเป็น
+    // null ไป
+    'education_form' => 'รูปแบบการศึกษา',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? 'upload') === 'upload') {
@@ -35,25 +41,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? 'upload') === 
             if (!$sheetNames) {
                 throw new RuntimeException('ไม่พบชีทในไฟล์นี้');
             }
-            // ใช้ชีทแรกในไฟล์เสมอ เพราะชื่อชีทผูกกับปีการศึกษา (เช่น "2569_School") เปลี่ยนทุกปี
-            $data = $reader->readGrid($sheetNames[0]);
-            $grid = $data['grid'];
-            $maxCol = $data['maxCol'];
-            $maxRow = $data['maxRow'];
-
+            // เดิมใช้ชีทแรกในไฟล์เสมอ (สมมติว่าชื่อชีทผูกกับปีการศึกษาเปลี่ยนทุกปีแต่ตำแหน่งชีทที่ 1
+            // คงที่) แต่พบว่าไฟล์ export บางแบบ (เช่น SchoolDetail_2569.xlsx) มีชีทสรุป/ชีทอื่นแทรกอยู่
+            // ก่อนชีทข้อมูลจริง — แก้เมื่อ 2026-08-30 ให้สแกนหาชีทที่แถวหัวตาราง (แถวที่ 1) มีทั้ง
+            // "SchoolCode" และ "SchoolName" แทน ไม่ยึดตำแหน่งชีทตายตัวอีกต่อไป
+            $usedSheet = null;
             $colIndex = [];
-            for ($c = 1; $c <= $maxCol; $c++) {
-                $headerText = trim((string)($grid[1][$c] ?? ''));
-                foreach ($columnMap as $field => $headerName) {
-                    if ($headerText === $headerName) {
-                        $colIndex[$field] = $c;
+            $maxCol = 0;
+            $maxRow = 0;
+            $grid = [];
+            foreach ($sheetNames as $sn) {
+                $data = $reader->readGrid($sn);
+                $candidateColIndex = [];
+                for ($c = 1; $c <= $data['maxCol']; $c++) {
+                    $headerText = trim((string)($data['grid'][1][$c] ?? ''));
+                    foreach ($columnMap as $field => $headerName) {
+                        if ($headerText === $headerName) {
+                            $candidateColIndex[$field] = $c;
+                        }
                     }
                 }
+                if (isset($candidateColIndex['school_code'], $candidateColIndex['school_name'])) {
+                    $usedSheet = $sn;
+                    $colIndex = $candidateColIndex;
+                    $grid = $data['grid'];
+                    $maxCol = $data['maxCol'];
+                    $maxRow = $data['maxRow'];
+                    break;
+                }
             }
-            if (!isset($colIndex['school_code']) || !isset($colIndex['school_name'])) {
+            if ($usedSheet === null) {
                 throw new RuntimeException(
-                    'ไม่พบคอลัมน์ "SchoolCode" หรือ "SchoolName" ในแถวหัวตาราง (แถวที่ 1) ของชีท "'
-                    . $sheetNames[0] . '" — ตรวจสอบว่าเป็นไฟล์ทำเนียบโรงเรียนที่ถูกต้อง'
+                    'ไม่พบชีทไหนในไฟล์นี้ที่มีคอลัมน์ "SchoolCode" และ "SchoolName" ในแถวหัวตาราง '
+                    . '(แถวที่ 1) เลย — ตรวจสอบว่าเป็นไฟล์ทำเนียบโรงเรียนที่ถูกต้อง'
                 );
             }
 
@@ -100,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? 'upload') === 
                     'province'      => isset($colIndex['province']) ? trim((string)($grid[$r][$colIndex['province']] ?? '')) : null,
                     'department'    => isset($colIndex['department']) ? trim((string)($grid[$r][$colIndex['department']] ?? '')) : null,
                     'area_name'     => isset($colIndex['area_name']) ? trim((string)($grid[$r][$colIndex['area_name']] ?? '')) : null,
+                    'education_form' => isset($colIndex['education_form']) ? trim((string)($grid[$r][$colIndex['education_form']] ?? '')) : null,
                 ];
             }
             if (!$rows) {
@@ -111,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? 'upload') === 
             $del = $db->prepare('DELETE FROM schools_master WHERE academic_year = :y');
             $del->execute(['y' => $academicYear]);
             $ins = $db->prepare(
-                'INSERT INTO schools_master (school_code, academic_year, school_name, tambon, amphoe, province, department, area_name)
-                 VALUES (:school_code, :academic_year, :school_name, :tambon, :amphoe, :province, :department, :area_name)'
+                'INSERT INTO schools_master (school_code, academic_year, school_name, tambon, amphoe, province, department, area_name, education_form)
+                 VALUES (:school_code, :academic_year, :school_name, :tambon, :amphoe, :province, :department, :area_name, :education_form)'
             );
             foreach ($rows as $row) {
                 $ins->execute($row);

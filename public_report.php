@@ -88,6 +88,7 @@ render_report_start('charts');
         $barCharts = [
             ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept, 'fmt' => $fmtPeople],
             ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe, 'fmt' => $fmtPeople],
+            ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามรูปแบบการศึกษา', 'data' => $studentsByEducationForm, 'fmt' => $fmtPeople],
             ['title' => 'นักเรียนออกกลางคัน แยกตามสาเหตุ', 'data' => $dropoutByReason, 'fmt' => $fmtPeople],
             ['title' => 'นักเรียนพิการ แยกตามประเภทความพิการ', 'data' => $disabilityByType, 'fmt' => $fmtPeople],
         ];
