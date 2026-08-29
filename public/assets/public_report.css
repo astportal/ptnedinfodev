@@ -7,6 +7,17 @@
 .filter-bar { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 12px 0; }
 .filter-bar .field { margin-bottom: 0; min-width: 220px; }
 
+/* ตารางสรุปยอดรวม (public_report_table.php) — จำกัดความสูงแล้ว scroll ได้ทั้ง 2 แกนในกรอบเดียว
+   (ไม่ใช้ .table-scroll ตัวมาตรฐานของระบบตรง ๆ เพราะตัวนั้น scroll ได้แค่แนวนอน ถ้าตารางมีแถวเยอะ
+   จนสูงเกินจอ scrollbar แนวนอนจะไปโผล่ท้ายตาราง ต้องเลื่อนหน้าจอลงไปสุดก่อนถึงจะเห็น/ใช้งานได้ —
+   ใส่ max-height ให้กรอบตารางเองเลื่อนได้ในพื้นที่คงที่ scrollbar เลยอยู่ในตำแหน่งที่เห็นได้เสมอ) */
+.report-table-scroll {
+  max-height: 75vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 /* เมนูด้านซ้าย — สลับหน้ากราฟ/ตาราง คงค่าปีการศึกษา+มิติที่เลือกไว้ข้าม 2 หน้า (ผ่าน query string) */
 .report-layout { display: flex; gap: 24px; align-items: flex-start; }
 .report-sidebar {

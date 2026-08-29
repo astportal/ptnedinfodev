@@ -300,7 +300,7 @@ function render_report_start(string $activePage): void
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
-<div class="container" style="max-width: 1300px;">
+<div class="container" style="max-width: 98vw;">
   <div class="report-layout">
     <nav class="report-sidebar">
       <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>

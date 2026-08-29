@@ -13,7 +13,7 @@ render_report_start('table');
         <?php if (!$groups): ?>
           <p class="muted">ยังไม่มีข้อมูลสำหรับปีการศึกษานี้</p>
         <?php else: ?>
-          <div class="table-scroll">
+          <div class="report-table-scroll">
             <table class="stats-table">
               <thead>
                 <tr>
