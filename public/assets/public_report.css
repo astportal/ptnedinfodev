@@ -1,0 +1,75 @@
+/* สไตล์เฉพาะหน้าสถิติสาธารณะ (public_report.php, public_report_table.php) — แยกจาก style.css
+   หลักของระบบ เพราะมีทั้งกราฟและ layout แบบมีเมนูด้านซ้ายที่หน้าอื่นในระบบไม่ได้ใช้ */
+
+.stats-table th, .stats-table td { white-space: nowrap; }
+.stats-table td.num, .stats-table th.num { text-align: right; }
+.stats-table tfoot td { font-weight: 700; background: #f3f4f6; }
+.filter-bar { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 12px 0; }
+.filter-bar .field { margin-bottom: 0; min-width: 220px; }
+
+/* เมนูด้านซ้าย — สลับหน้ากราฟ/ตาราง คงค่าปีการศึกษา+มิติที่เลือกไว้ข้าม 2 หน้า (ผ่าน query string) */
+.report-layout { display: flex; gap: 24px; align-items: flex-start; }
+.report-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.report-sidebar a {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+}
+.report-sidebar a:hover { background: #eef2ff; }
+.report-sidebar a.active { background: var(--primary); color: #fff; }
+.report-main { flex: 1; min-width: 0; }
+
+@media (max-width: 720px) {
+  .report-layout { flex-direction: column; }
+  .report-sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; }
+  .report-sidebar a { flex: 1; text-align: center; }
+}
+
+/* กราฟ — สีตามชุดสี validated ของ dataviz skill (references/palette.md), โหมดสว่างเท่านั้น
+   (เว็บนี้ทั้งเว็บไม่มีโหมดมืด — ดู public/assets/style.css) */
+.viz-root {
+  --chart-surface: #fcfcfb;
+  --ink-primary:   #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted:     #898781;
+  --gridline:      #e1e0d9;
+  --series-1:      #2a78d6; /* ชาย / นักเรียน (คอลัมน์เดียว) */
+  --series-2:      #eb6834; /* หญิง */
+}
+.kpi-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.kpi-col { flex: 1; min-width: 260px; }
+.kpi-col h3 { font-size: 14px; font-weight: 600; color: var(--ink-secondary); margin: 0 0 10px; }
+.stat-value { font-size: 32px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: normal; }
+.stat-sub { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+
+.gender-bar { display: flex; gap: 2px; height: 28px; background: var(--chart-surface); border-radius: 4px; overflow: hidden; }
+.gender-seg { height: 100%; }
+.gender-seg.male { background: var(--series-1); }
+.gender-seg.female { background: var(--series-2); }
+.gender-legend { display: flex; gap: 24px; margin-top: 10px; font-size: 14px; color: var(--ink-primary); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.swatch.male { background: var(--series-1); }
+.swatch.female { background: var(--series-2); }
+
+.bar-chart { display: flex; flex-direction: column; gap: 7px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { width: 240px; flex-shrink: 0; font-size: 13px; color: var(--ink-secondary); text-align: right; overflow-wrap: break-word; }
+.bar-wrap { flex: 1; min-width: 0; }
+.bar-fill { height: 20px; max-height: 20px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 3px; }
+.bar-value { width: 72px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
+/* กราฟแท่งที่อยู่ในคอลัมน์แคบ (kpi-col เช่น อันดับสูงสุด/ต่ำสุด) ต้องย่อป้ายชื่อ/ค่าให้พอดีคอลัมน์ */
+.kpi-col .bar-label { width: 96px; font-size: 12px; }
+.kpi-col .bar-value { width: 56px; font-size: 12px; }
