@@ -68,7 +68,7 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
     <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_search.php?<?= h($reportNavQuery) ?>" class="active">ค้นหารหัสสถานศึกษา</a>
     <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>">ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>">ครูผู้สอนรายชั้น</a>
+    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>">ครูผู้สอน</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
