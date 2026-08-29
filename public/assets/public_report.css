@@ -48,7 +48,11 @@
   .report-sidebar a { flex: 1; text-align: center; }
 }
 
-/* กราฟ — สีตามชุดสี validated ของ dataviz skill (references/palette.md), โหมดสว่างเท่านั้น
+/* กราฟ — โทนสีฟ้าพาสเทล (ชาย) / ชมพูพาสเทล (หญิง) ตามที่ผู้ใช้ระบุ (แก้เมื่อ 2026-08-29)
+   เดิมใช้ชุดสี validated ของ dataviz skill (น้ำเงินเข้ม/ส้ม) แต่เครื่องนี้ไม่มี node ให้รัน
+   validate_palette.js จึงเลือกคู่สีที่ hue ห่างกันมาก (ฟ้า ~210° กับ ชมพู ~340°) ซึ่งแยกได้แม้
+   สายตาเพี้ยนสีแดง-เขียว (deuteranopia/protanopia) เพราะไม่ได้อาศัยแกนแดง-เขียวเป็นหลัก และทุกจุด
+   ที่ใช้สีนี้แยกเพศ มี legend + label ตัวอักษรกำกับอยู่แล้ว (ไม่ได้ใช้สีเป็นตัวบ่งชี้เพียงอย่างเดียว)
    (เว็บนี้ทั้งเว็บไม่มีโหมดมืด — ดู public/assets/style.css) */
 .viz-root {
   --chart-surface: #fcfcfb;
@@ -56,8 +60,8 @@
   --ink-secondary: #52514e;
   --ink-muted:     #898781;
   --gridline:      #e1e0d9;
-  --series-1:      #2a78d6; /* ชาย / นักเรียน (คอลัมน์เดียว) */
-  --series-2:      #eb6834; /* หญิง */
+  --series-1:      #7fb3e0; /* ฟ้าพาสเทล — ชาย / นักเรียน (คอลัมน์เดียว) */
+  --series-2:      #f4a6c6; /* ชมพูพาสเทล — หญิง */
 }
 .kpi-row { display: flex; gap: 24px; flex-wrap: wrap; }
 .kpi-col { flex: 1; min-width: 260px; }
