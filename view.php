@@ -48,7 +48,7 @@ $reporting = new Reporting($db);
 $pivot = $reporting->pivot($formKey, $sheetName, $selectedYearInt);
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
-    'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล', 'department' => 'กระทรวง',
+    'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล', 'department' => 'ต้นสังกัด',
 ];
 
 // Some sheets (e.g. form 13, grouped by age_group per row) benefit from a rolled-up summary
