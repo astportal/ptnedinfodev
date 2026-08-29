@@ -313,6 +313,7 @@ function render_report_start(string $activePage): void
     <nav class="report-sidebar">
       <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>
       <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
+      <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
     </nav>
     <div class="report-main">
       <div class="card">
