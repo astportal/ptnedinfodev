@@ -20,6 +20,9 @@ class Importer
     /** @var array<int,array<string,true>> academic_year => known school codes for that year */
     private array $knownSchoolCodesByYear = [];
 
+    /** @var array<int,array<string,?string>> academic_year => school_name => school_code (or null if ambiguous) */
+    private array $schoolCodesByNameByYear = [];
+
     public function __construct(private PDO $db)
     {
     }
@@ -44,6 +47,42 @@ class Importer
             }
         }
         return $this->knownSchoolCodesByYear[$academicYear];
+    }
+
+    /**
+     * For a sheet that has no รหัสสถานศึกษา column at all but does name the school/center by name
+     * (e.g. form 16.2's "สังกัด" column, which is really the ศูนย์พัฒนาเด็กเล็ก's name) — look up
+     * schools_master (ทำเนียบโรงเรียน) by exact school_name match for that academic year, so the
+     * resolved school_code can flow into the same schoolMasterOverrides()/pivot() machinery every
+     * other form's school_code already goes through (agency_name/amphoe/tambon/department all get
+     * filled in automatically once school_code is known). Cached per year like knownSchoolCodes().
+     * A name matching more than one school_master row is intentionally left unresolved (null) —
+     * guessing wrong would silently misattribute the row to the wrong school, which is worse than
+     * flagging it for manual review the same way a genuinely unknown code would be.
+     */
+    private function schoolCodesByName(int $academicYear): array
+    {
+        if (!array_key_exists($academicYear, $this->schoolCodesByNameByYear)) {
+            $map = [];
+            try {
+                $stmt = $this->db->prepare('SELECT school_code, school_name FROM schools_master WHERE academic_year = :y');
+                $stmt->execute(['y' => $academicYear]);
+                while ($row = $stmt->fetch()) {
+                    $name = trim((string)$row['school_name']);
+                    if ($name === '') {
+                        continue;
+                    }
+                    // Seen this name before with a different code → ambiguous, mark unresolved.
+                    $map[$name] = array_key_exists($name, $map) && $map[$name] !== $row['school_code']
+                        ? null
+                        : $row['school_code'];
+                }
+            } catch (Throwable $e) {
+                // schools_master table not migrated in yet — degrade to "no matches" like knownSchoolCodes().
+            }
+            $this->schoolCodesByNameByYear[$academicYear] = $map;
+        }
+        return $this->schoolCodesByNameByYear[$academicYear];
     }
 
     /**
@@ -275,13 +314,27 @@ class Importer
 
                 $extraJson = $extra ? json_encode($extra, JSON_UNESCAPED_UNICODE) : null;
 
+                // Some sheets don't have a รหัสสถานศึกษา column at all but do name the school by
+                // name (e.g. form 16.2's "สังกัด" column, which is really a ศูนย์พัฒนาเด็กเล็ก's
+                // name) — resolve school_code by matching that name against schools_master, so the
+                // same schoolMasterOverrides()/pivot() machinery every other form's school_code
+                // already goes through fills in agency_name/amphoe/tambon/department automatically.
+                $matchByName = $sheetDef['match_school_code_by_name'] ?? false;
+                if ($matchByName && ($standard['school_code'] ?? null) === null) {
+                    $nameToMatch = trim((string)($standard['school_name'] ?? ''));
+                    if ($nameToMatch !== '') {
+                        $standard['school_code'] = $this->schoolCodesByName($academicYear)[$nameToMatch] ?? null;
+                    }
+                }
+
                 // Flag rows whose school_code is blank or not found in the reference roster
                 // (schools_master, uploaded via schools_master.php) for manual review — only for
-                // sheets that actually have a school_code identity column, and only once the admin
-                // has uploaded a roster (see knownSchoolCodes() for why an empty roster skips this).
+                // sheets that actually have a school_code identity column (or resolve one by name,
+                // per $matchByName above), and only once the admin has uploaded a roster (see
+                // knownSchoolCodes() for why an empty roster skips this).
                 $schoolCodeIssue = null;
                 $yearKnownCodes = $this->knownSchoolCodes($academicYear);
-                if (in_array('school_code', $identityFields, true) && $yearKnownCodes) {
+                if ((in_array('school_code', $identityFields, true) || $matchByName) && $yearKnownCodes) {
                     if (($standard['school_code'] ?? null) === null) {
                         $schoolCodeIssue = 'missing';
                     } elseif (!isset($yearKnownCodes[$standard['school_code']])) {
@@ -595,6 +648,17 @@ class Importer
                  AND school_code IS NULL AND agency_name IS NULL AND tambon <=> :tb AND amphoe <=> :am'
             );
             $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'tb' => $tambon, 'am' => $amphoe]);
+        } elseif ($schoolName) {
+            // Sheet identifies rows by school_name only, no school_code column and no separate
+            // agency_name (e.g. form 16.2's school_code is *resolved* from school_name against
+            // schools_master — see match_school_code_by_name handling in importSheet() — a name
+            // that fails to resolve still needs a dedup key so re-uploading the same file doesn't
+            // pile up duplicate unresolved rows).
+            $del = $this->db->prepare(
+                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND academic_year = :yr
+                 AND school_code IS NULL AND agency_name IS NULL AND tambon IS NULL AND school_name <=> :snm'
+            );
+            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'snm' => $schoolName]);
         }
     }
 
