@@ -13,6 +13,14 @@
    ตายตัว) */
 .stats-table tr.row-total td { font-weight: 700; background: #f3f4f6; }
 
+/* หัวตาราง 2 แถว (public_school_grade_table.php — ระดับชั้น + ชาย/หญิง) — style.css ตั้ง
+   `th { position: sticky; top: 0 }` ไว้ทุก th เหมาะกับตารางหัวแถวเดียวทั่วไป แต่ตารางนี้มี 2 แถว
+   หัวตาราง ถ้าปล่อยให้ th ทุกตัว sticky top:0 เหมือนกันหมด แถวที่ 2 (ชาย/หญิง) จะไปทับซ้อนแถวที่ 1
+   (ชื่อระดับชั้น) แทนที่จะเรียงต่อกัน — แก้โดย sticky ทั้ง <thead> เป็นก้อนเดียวแทน (เบราว์เซอร์
+   สมัยใหม่รองรับ position: sticky บน thead ได้) แล้วปิด sticky รายตัวของ th ในตารางนี้ */
+.stats-table.two-row-header thead { position: sticky; top: 0; z-index: 1; }
+.stats-table.two-row-header th { position: static; }
+
 /* ตารางสรุปยอดรวม (public_report_table.php) — จำกัดความสูงแล้ว scroll ได้ทั้ง 2 แกนในกรอบเดียว
    (ไม่ใช้ .table-scroll ตัวมาตรฐานของระบบตรง ๆ เพราะตัวนั้น scroll ได้แค่แนวนอน ถ้าตารางมีแถวเยอะ
    จนสูงเกินจอ scrollbar แนวนอนจะไปโผล่ท้ายตาราง ต้องเลื่อนหน้าจอลงไปสุดก่อนถึงจะเห็น/ใช้งานได้ —
