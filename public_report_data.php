@@ -305,58 +305,54 @@ function render_report_start(string $activePage): void
 <div class="topbar">
   <a href="public_report.php">สถิติการศึกษาจังหวัดปัตตานี</a>
   <nav>
+    <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>
+    <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
+    <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
 <div class="container" style="max-width: 98vw;">
-  <div class="report-layout">
-    <nav class="report-sidebar">
-      <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>
-      <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
-      <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
-    </nav>
-    <div class="report-main">
-      <div class="card">
-        <h1>สถิติการศึกษาจังหวัดปัตตานี ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
-        <p class="muted">สรุปยอดรวมระดับจังหวัดจากข้อมูลที่หน่วยงานทางการศึกษาในจังหวัดส่งกลับผ่านระบบ
-          รวบรวมข้อมูลของสำนักงานศึกษาธิการจังหวัดปัตตานี — เป็นตัวเลขสรุประดับสังกัด/อำเภอเท่านั้น
-          ไม่มีข้อมูลรายสถานศึกษาหรือรายบุคคล</p>
+  <div class="report-main">
+    <div class="card">
+      <h1>สถิติการศึกษาจังหวัดปัตตานี ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
+      <p class="muted">สรุปยอดรวมระดับจังหวัดจากข้อมูลที่หน่วยงานทางการศึกษาในจังหวัดส่งกลับผ่านระบบ
+        รวบรวมข้อมูลของสำนักงานศึกษาธิการจังหวัดปัตตานี — เป็นตัวเลขสรุประดับสังกัด/อำเภอเท่านั้น
+        ไม่มีข้อมูลรายสถานศึกษาหรือรายบุคคล</p>
 
-        <form method="get" class="filter-bar">
+      <form method="get" class="filter-bar">
+        <div class="field">
+          <label>ปีการศึกษา</label>
+          <select name="year" onchange="this.form.submit()">
+            <?php foreach ($availableYears as $y): ?>
+              <option value="<?= h((string)$y) ?>" <?= $selectedYear === (int)$y ? 'selected' : '' ?>><?= h((string)$y) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <?php if ($activePage === 'table'): ?>
           <div class="field">
-            <label>ปีการศึกษา</label>
-            <select name="year" onchange="this.form.submit()">
-              <?php foreach ($availableYears as $y): ?>
-                <option value="<?= h((string)$y) ?>" <?= $selectedYear === (int)$y ? 'selected' : '' ?>><?= h((string)$y) ?></option>
+            <label>แยกตามมิติ</label>
+            <select name="dim" onchange="this.form.submit()">
+              <?php foreach ($dimensions as $key => $label): ?>
+                <option value="<?= h($key) ?>" <?= $selectedDimension === $key ? 'selected' : '' ?>><?= h($label) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
-          <?php if ($activePage === 'table'): ?>
-            <div class="field">
-              <label>แยกตามมิติ</label>
-              <select name="dim" onchange="this.form.submit()">
-                <?php foreach ($dimensions as $key => $label): ?>
-                  <option value="<?= h($key) ?>" <?= $selectedDimension === $key ? 'selected' : '' ?>><?= h($label) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-          <?php else: ?>
-            <?php // หน้ากราฟไม่มี dropdown มิตินี้ (กราฟส่วนใหญ่ตรึงมิติไว้ตายตัวอยู่แล้ว มีไว้จะทำให้
-            // สับสนว่าเปลี่ยนแล้วกราฟจะเปลี่ยนตามหรือไม่) แต่ยังส่งค่ามิติที่เคยเลือกไว้จากหน้าตาราง
-            // ต่อไปด้วย เผื่อผู้ใช้งานเปลี่ยนปีการศึกษาที่หน้านี้แล้วสลับกลับไปหน้าตาราง จะได้ไม่รีเซ็ต
-            // มิติที่เคยเลือกไว้ ?>
-            <input type="hidden" name="dim" value="<?= h($selectedDimension) ?>">
-          <?php endif; ?>
-        </form>
-      </div>
+        <?php else: ?>
+          <?php // หน้ากราฟไม่มี dropdown มิตินี้ (กราฟส่วนใหญ่ตรึงมิติไว้ตายตัวอยู่แล้ว มีไว้จะทำให้
+          // สับสนว่าเปลี่ยนแล้วกราฟจะเปลี่ยนตามหรือไม่) แต่ยังส่งค่ามิติที่เคยเลือกไว้จากหน้าตาราง
+          // ต่อไปด้วย เผื่อผู้ใช้งานเปลี่ยนปีการศึกษาที่หน้านี้แล้วสลับกลับไปหน้าตาราง จะได้ไม่รีเซ็ต
+          // มิติที่เคยเลือกไว้ ?>
+          <input type="hidden" name="dim" value="<?= h($selectedDimension) ?>">
+        <?php endif; ?>
+      </form>
+    </div>
     <?php
 }
 
-/** ปิด .report-main / .report-layout / .container ที่เปิดไว้ใน render_report_start() + footer */
+/** ปิด .report-main / .container ที่เปิดไว้ใน render_report_start() + footer */
 function render_report_end(): void
 {
     ?>
-    </div>
   </div>
 </div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">

@@ -1,5 +1,5 @@
-/* สไตล์เฉพาะหน้าสถิติสาธารณะ (public_report.php, public_report_table.php) — แยกจาก style.css
-   หลักของระบบ เพราะมีทั้งกราฟและ layout แบบมีเมนูด้านซ้ายที่หน้าอื่นในระบบไม่ได้ใช้ */
+/* สไตล์เฉพาะหน้าสถิติสาธารณะ (public_report.php, public_report_table.php, public_school_search.php)
+   — แยกจาก style.css หลักของระบบ เพราะมีทั้งกราฟและเมนูสลับ 3 หน้าสาธารณะที่หน้าอื่นในระบบไม่ได้ใช้ */
 
 .stats-table th, .stats-table td { white-space: nowrap; }
 .stats-table td.num, .stats-table th.num { text-align: right; }
@@ -18,35 +18,12 @@
   border-radius: 8px;
 }
 
-/* เมนูด้านซ้าย — สลับหน้ากราฟ/ตาราง คงค่าปีการศึกษา+มิติที่เลือกไว้ข้าม 2 หน้า (ผ่าน query string) */
-.report-layout { display: flex; gap: 24px; align-items: flex-start; }
-.report-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.report-sidebar a {
-  display: block;
-  padding: 10px 14px;
-  border-radius: 8px;
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-}
-.report-sidebar a:hover { background: #eef2ff; }
-.report-sidebar a.active { background: var(--primary); color: #fff; }
-.report-main { flex: 1; min-width: 0; }
-
-@media (max-width: 720px) {
-  .report-layout { flex-direction: column; }
-  .report-sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; }
-  .report-sidebar a { flex: 1; text-align: center; }
-}
+/* เมนูสลับหน้า — ย้ายจากเดิม (sidebar ด้านซ้าย) มาไว้ในแถบบนสุดแทน (แก้เมื่อ 2026-08-29) อยู่ทางซ้าย
+   ของลิงก์ "เข้าสู่ระบบเจ้าหน้าที่" ในแถบเดียวกัน (ลำดับ HTML ก่อนลิงก์เข้าสู่ระบบ) — ใช้คลาส
+   .topbar nav a มาตรฐานของระบบอยู่แล้ว เพิ่มแค่ a.active ให้เห็นว่าอยู่หน้าไหน คงค่าปีการศึกษา
+   (+มิติที่เลือกสำหรับหน้าตาราง) ไว้ข้ามหน้าผ่าน query string เหมือนเดิม */
+.topbar nav a.active { color: var(--primary); font-weight: 700; }
+.report-main { min-width: 0; }
 
 /* กราฟ — โทนสีฟ้าพาสเทล (ชาย) / ชมพูพาสเทล (หญิง) ตามที่ผู้ใช้ระบุ (แก้เมื่อ 2026-08-29)
    เดิมใช้ชุดสี validated ของ dataviz skill (น้ำเงินเข้ม/ส้ม) แต่เครื่องนี้ไม่มี node ให้รัน

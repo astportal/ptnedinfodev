@@ -64,43 +64,40 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
 <div class="topbar">
   <a href="public_report.php">สถิติการศึกษาจังหวัดปัตตานี</a>
   <nav>
+    <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม (กราฟ)</a>
+    <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>
+    <a href="public_school_search.php?<?= h($reportNavQuery) ?>" class="active">ค้นหารหัสสถานศึกษา</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
 <div class="container" style="max-width: 98vw;">
-  <div class="report-layout">
-    <nav class="report-sidebar">
-      <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม (กราฟ)</a>
-      <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>
-      <a href="public_school_search.php?<?= h($reportNavQuery) ?>" class="active">ค้นหารหัสสถานศึกษา</a>
-    </nav>
-    <div class="report-main">
-      <div class="card">
-        <h1>ค้นหารหัสสถานศึกษา</h1>
-        <p class="muted">ค้นจากชื่อสถานศึกษา (พิมพ์บางส่วนของชื่อก็ค้นเจอ) — ถ้าเจอชื่อซ้ำกันหลายแห่ง
-          ระบบจะแสดงสังกัด/หน่วยงาน, อำเภอ, ตำบล กำกับทุกแถวเพื่อช่วยแยกให้ถูกต้อง ต้องเลือกปีการศึกษา
-          ก่อนค้นเสมอ เพราะทำเนียบโรงเรียนเก็บแยกตามปี โรงเรียนเดียวกันอาจเปลี่ยนสังกัด/อำเภอข้ามปีได้</p>
+  <div class="report-main">
+    <div class="card">
+      <h1>ค้นหารหัสสถานศึกษา</h1>
+      <p class="muted">ค้นจากชื่อสถานศึกษา (พิมพ์บางส่วนของชื่อก็ค้นเจอ) — ถ้าเจอชื่อซ้ำกันหลายแห่ง
+        ระบบจะแสดงสังกัด/หน่วยงาน, อำเภอ, ตำบล กำกับทุกแถวเพื่อช่วยแยกให้ถูกต้อง ต้องเลือกปีการศึกษา
+        ก่อนค้นเสมอ เพราะทำเนียบโรงเรียนเก็บแยกตามปี โรงเรียนเดียวกันอาจเปลี่ยนสังกัด/อำเภอข้ามปีได้</p>
 
-        <?php if (!$availableYears): ?>
-          <div class="alert alert-err">ยังไม่มีทำเนียบโรงเรียนในระบบเลย</div>
-        <?php else: ?>
-          <form method="get" class="filter-bar">
-            <div class="field">
-              <label>ชื่อสถานศึกษา</label>
-              <input type="text" name="q" value="<?= h($q) ?>" placeholder="เช่น บ้านตลาด" autofocus>
-            </div>
-            <div class="field">
-              <label>ปีการศึกษา</label>
-              <select name="year">
-                <?php foreach ($availableYears as $y): ?>
-                  <option value="<?= (int)$y ?>" <?= $selectedYear === (int)$y ? 'selected' : '' ?>><?= (int)$y ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <button class="btn" type="submit">ค้นหา</button>
-          </form>
-        <?php endif; ?>
-      </div>
+      <?php if (!$availableYears): ?>
+        <div class="alert alert-err">ยังไม่มีทำเนียบโรงเรียนในระบบเลย</div>
+      <?php else: ?>
+        <form method="get" class="filter-bar">
+          <div class="field">
+            <label>ชื่อสถานศึกษา</label>
+            <input type="text" name="q" value="<?= h($q) ?>" placeholder="เช่น บ้านตลาด" autofocus>
+          </div>
+          <div class="field">
+            <label>ปีการศึกษา</label>
+            <select name="year">
+              <?php foreach ($availableYears as $y): ?>
+                <option value="<?= (int)$y ?>" <?= $selectedYear === (int)$y ? 'selected' : '' ?>><?= (int)$y ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <button class="btn" type="submit">ค้นหา</button>
+        </form>
+      <?php endif; ?>
+    </div>
 
       <?php if ($q !== ''): ?>
         <div class="card">
@@ -143,7 +140,6 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
           <?php endif; ?>
         </div>
       <?php endif; ?>
-    </div>
   </div>
 </div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
