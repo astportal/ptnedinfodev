@@ -99,5 +99,25 @@ render_report_start('charts');
           </div>
         </div>
       </div>
+
+      <div class="card viz-root">
+        <h2>สถานะหลังจบการศึกษา แยกตามระดับชั้น</h2>
+        <p class="muted">ไม่รวมยอด "ทั้งหมด"/"ที่จบการศึกษา"/"ที่ไม่จบการศึกษา" (เป็นยอดรวมของคอลัมน์
+          ปลายทางย่อยด้านล่างอยู่แล้ว) แสดงเฉพาะปลายทางย่อยของนักเรียนที่จบการศึกษาแต่ละระดับชั้น</p>
+        <div class="kpi-row">
+          <div class="kpi-col">
+            <h3>จบ ป.6</h3>
+            <?php render_bar_chart($graduateStatusP6, $fmtPeople); ?>
+          </div>
+          <div class="kpi-col">
+            <h3>จบ ม.3</h3>
+            <?php render_bar_chart($graduateStatusM3, $fmtPeople); ?>
+          </div>
+          <div class="kpi-col">
+            <h3>จบ ม.6</h3>
+            <?php render_bar_chart($graduateStatusM6, $fmtPeople); ?>
+          </div>
+        </div>
+      </div>
 <?php
 render_report_end();
