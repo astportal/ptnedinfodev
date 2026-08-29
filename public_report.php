@@ -94,24 +94,31 @@ $metrics = [
     ]],
 ];
 
+// รวมยอด 1 metric แยกตาม 1 มิติ — ใช้ทั้งกับตารางหลัก (ตามมิติที่เลือกบน dropdown) และกราฟแท่ง
+// ด้านล่างที่ตรึงมิติไว้ตายตัว (ต้นสังกัด/อำเภอ) โดยไม่ขึ้นกับ dropdown
+function compute_metric_totals(Reporting $reporting, string $key, array $metricDef, string $dimension, int $academicYear): array
+{
+    if ($key === 'schools') {
+        return $reporting->schoolCountByDimension($dimension, $academicYear);
+    }
+    $totals = [];
+    foreach ($metricDef['sheets'] as $sheet) {
+        [$formKey, $sheetName] = $sheet;
+        $onlyColumns = $sheet[2] ?? null; // null = sum every value column (see groupedTotal())
+        $sheetTotals = $onlyColumns !== null
+            ? $reporting->groupedTotalForColumns($formKey, $sheetName, $onlyColumns, $dimension, $academicYear)
+            : $reporting->groupedTotal($formKey, $sheetName, $dimension, $academicYear);
+        foreach ($sheetTotals as $g => $v) {
+            $totals[$g] = ($totals[$g] ?? 0) + $v;
+        }
+    }
+    return $totals;
+}
+
 $dataByMetric = [];
 $groupSet = [];
 foreach ($metrics as $key => $m) {
-    if ($key === 'schools') {
-        $totals = $reporting->schoolCountByDimension($selectedDimension, $selectedYear);
-    } else {
-        $totals = [];
-        foreach ($m['sheets'] as $sheet) {
-            [$formKey, $sheetName] = $sheet;
-            $onlyColumns = $sheet[2] ?? null; // null = sum every value column (see groupedTotal())
-            $sheetTotals = $onlyColumns !== null
-                ? $reporting->groupedTotalForColumns($formKey, $sheetName, $onlyColumns, $selectedDimension, $selectedYear)
-                : $reporting->groupedTotal($formKey, $sheetName, $selectedDimension, $selectedYear);
-            foreach ($sheetTotals as $g => $v) {
-                $totals[$g] = ($totals[$g] ?? 0) + $v;
-            }
-        }
-    }
+    $totals = compute_metric_totals($reporting, $key, $m, $selectedDimension, $selectedYear);
     $dataByMetric[$key] = $totals;
     foreach (array_keys($totals) as $g) {
         $groupSet[$g] = true;
@@ -127,6 +134,45 @@ if ($unknownIdx !== false) {
     $groups = array_values($groups);
     $groups[] = 'ไม่ระบุ';
 }
+
+// --- ข้อมูลสำหรับกราฟ ---
+
+// จำนวนนักเรียนแยกตามต้นสังกัดและอำเภอ — ตรึงมิติไว้ตายตัว (ไม่ขึ้นกับ dropdown ด้านบน) เพราะ
+// ผู้ใช้งานอยากเห็นทั้ง 2 มิตินี้พร้อมกันเสมอ ไม่ใช่แค่มิติที่เลือกอยู่
+$studentsByDept = compute_metric_totals($reporting, 'students', $metrics['students'], 'department', $selectedYear);
+$studentsByAmphoe = compute_metric_totals($reporting, 'students', $metrics['students'], 'amphoe', $selectedYear);
+arsort($studentsByDept);
+arsort($studentsByAmphoe);
+
+// สัดส่วนนักเรียนชาย:หญิง — ใช้คอลัมน์ชุดเดียวกับตัวเลข "จำนวนนักเรียน" ด้านบนทุกประการ แต่ใช้คอลัมน์
+// แยกเพศดิบแทนคอลัมน์ "รวม"/"รวมทั้งสิ้น" (ซึ่งไม่มีเพศให้แยก) — ดู Reporting::genderTotalsForColumns
+$genderSheets = [
+    ['4_students', '4.จำนวนผู้เรียน', null],
+    ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
+        'เด็กเล็ก / อายุ 2 ปี / ชาย', 'เด็กเล็ก / อายุ 2 ปี / หญิง',
+        'เด็กเล็ก / อายุ 3 ปี / ชาย', 'เด็กเล็ก / อายุ 3 ปี / หญิง',
+        'เด็กเล็ก / อายุ 4 ปี / ชาย', 'เด็กเล็ก / อายุ 4 ปี / หญิง',
+        'เด็กเล็ก / อายุ 5 ปี / ชาย', 'เด็กเล็ก / อายุ 5 ปี / หญิง',
+    ]],
+    ['15_private_nonformal', '15.1', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
+    ['15_private_nonformal', '15.2', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
+    ['15_private_nonformal', '15.3', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
+    ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนนักเรียน / ชาย', 'จำนวนนักเรียน / หญิง']],
+];
+$genderMale = 0.0;
+$genderFemale = 0.0;
+foreach ($genderSheets as [$formKey, $sheetName, $onlyColumns]) {
+    $g = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear);
+    $genderMale += $g['male'];
+    $genderFemale += $g['female'];
+}
+$genderTotal = $genderMale + $genderFemale;
+
+// อัตราส่วนนักเรียนต่อครู — ยอดรวมทั้งจังหวัด ไม่ขึ้นกับมิติที่เลือก (ผลรวมทุกกลุ่มเท่ากันไม่ว่าจะ
+// แยกตามมิติไหน) จึงใช้ $dataByMetric ที่คำนวณไว้แล้วสำหรับตารางหลักได้เลย ไม่ต้อง query ซ้ำ
+$totalStudents = array_sum($dataByMetric['students']);
+$totalTeachers = array_sum($dataByMetric['teachers']);
+$studentTeacherRatio = $totalTeachers > 0 ? $totalStudents / $totalTeachers : null;
 
 function fmt_num($v): string
 {
@@ -149,6 +195,40 @@ function fmt_num($v): string
   .stats-table tfoot td { font-weight: 700; background: #f3f4f6; }
   .filter-bar { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 12px 0; }
   .filter-bar .field { margin-bottom: 0; min-width: 220px; }
+
+  /* กราฟ — สีตามชุดสี validated ของ dataviz skill (references/palette.md), โหมดสว่างเท่านั้น
+     (เว็บนี้ทั้งเว็บไม่มีโหมดมืด — ดู public/assets/style.css) */
+  .viz-root {
+    --chart-surface: #fcfcfb;
+    --ink-primary:   #0b0b0b;
+    --ink-secondary: #52514e;
+    --ink-muted:     #898781;
+    --gridline:      #e1e0d9;
+    --series-1:      #2a78d6; /* ชาย / นักเรียน (คอลัมน์เดียว) */
+    --series-2:      #eb6834; /* หญิง */
+  }
+  .kpi-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .kpi-col { flex: 1; min-width: 260px; }
+  .kpi-col h3 { font-size: 14px; font-weight: 600; color: var(--ink-secondary); margin: 0 0 10px; }
+  .stat-value { font-size: 32px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: normal; }
+  .stat-sub { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+
+  .gender-bar { display: flex; gap: 2px; height: 28px; background: var(--chart-surface); border-radius: 4px; overflow: hidden; }
+  .gender-seg { height: 100%; }
+  .gender-seg.male { background: var(--series-1); }
+  .gender-seg.female { background: var(--series-2); }
+  .gender-legend { display: flex; gap: 24px; margin-top: 10px; font-size: 14px; color: var(--ink-primary); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .swatch.male { background: var(--series-1); }
+  .swatch.female { background: var(--series-2); }
+
+  .bar-chart { display: flex; flex-direction: column; gap: 7px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-label { width: 240px; flex-shrink: 0; font-size: 13px; color: var(--ink-secondary); text-align: right; overflow-wrap: break-word; }
+  .bar-wrap { flex: 1; min-width: 0; }
+  .bar-fill { height: 20px; max-height: 20px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 3px; }
+  .bar-value { width: 72px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -183,6 +263,41 @@ function fmt_num($v): string
         </select>
       </div>
     </form>
+  </div>
+
+  <div class="card viz-root">
+    <div class="kpi-row">
+      <div class="kpi-col">
+        <h3>สัดส่วนนักเรียนชาย : หญิง</h3>
+        <?php if ($genderTotal <= 0): ?>
+          <p class="muted">ยังไม่มีข้อมูล</p>
+        <?php else: ?>
+          <?php
+            $malePct = $genderMale / $genderTotal * 100;
+            $femalePct = $genderFemale / $genderTotal * 100;
+          ?>
+          <div class="gender-bar">
+            <div class="gender-seg male" style="width: <?= h(number_format($malePct, 2, '.', '')) ?>%"
+                 title="ชาย: <?= h(fmt_num($genderMale)) ?> คน (<?= h(number_format($malePct, 1)) ?>%)"></div>
+            <div class="gender-seg female" style="width: <?= h(number_format($femalePct, 2, '.', '')) ?>%"
+                 title="หญิง: <?= h(fmt_num($genderFemale)) ?> คน (<?= h(number_format($femalePct, 1)) ?>%)"></div>
+          </div>
+          <div class="gender-legend">
+            <span class="legend-item"><span class="swatch male"></span>ชาย <?= h(fmt_num($genderMale)) ?> คน (<?= h(number_format($malePct, 1)) ?>%)</span>
+            <span class="legend-item"><span class="swatch female"></span>หญิง <?= h(fmt_num($genderFemale)) ?> คน (<?= h(number_format($femalePct, 1)) ?>%)</span>
+          </div>
+        <?php endif; ?>
+      </div>
+      <div class="kpi-col">
+        <h3>อัตราส่วนนักเรียนต่อครู/บุคลากร</h3>
+        <?php if ($studentTeacherRatio === null): ?>
+          <p class="muted">ยังไม่มีข้อมูล</p>
+        <?php else: ?>
+          <div class="stat-value"><?= h(number_format($studentTeacherRatio, 1)) ?> : 1</div>
+          <div class="stat-sub">นักเรียน <?= h(fmt_num($totalStudents)) ?> คน ต่อครู/บุคลากร <?= h(fmt_num($totalTeachers)) ?> คน</div>
+        <?php endif; ?>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -223,6 +338,36 @@ function fmt_num($v): string
       </div>
     <?php endif; ?>
   </div>
+
+  <?php
+    $barCharts = [
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept],
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe],
+    ];
+  ?>
+  <?php foreach ($barCharts as $chart): ?>
+    <div class="card viz-root">
+      <h2><?= h($chart['title']) ?></h2>
+      <?php if (!$chart['data']): ?>
+        <p class="muted">ยังไม่มีข้อมูล</p>
+      <?php else: ?>
+        <?php $max = max($chart['data']); ?>
+        <div class="bar-chart">
+          <?php foreach ($chart['data'] as $label => $value): ?>
+            <?php $pct = $max > 0 ? $value / $max * 100 : 0; ?>
+            <div class="bar-row">
+              <div class="bar-label"><?= h($label) ?></div>
+              <div class="bar-wrap">
+                <div class="bar-fill" style="width: <?= h(number_format($pct, 2, '.', '')) ?>%"
+                     title="<?= h($label) ?>: <?= h(fmt_num($value)) ?> คน"></div>
+              </div>
+              <div class="bar-value"><?= h(fmt_num($value)) ?></div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; ?>
 </div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
   <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี<br>

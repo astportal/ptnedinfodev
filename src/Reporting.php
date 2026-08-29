@@ -110,6 +110,40 @@ class Reporting
     }
 
     /**
+     * Sum the given column_path(s) of one sheet's pivot() into male/female totals, by matching
+     * each path's last header level against "ชาย"/"หญิง" — every sheet used across this system
+     * ends a gender-split column exactly that way (see value_split_last in forms/registry.php),
+     * so this works the same regardless of how many header levels come before it. Pass a specific
+     * column list for a sheet that mixes topics together (same caveat as groupedTotalForColumns —
+     * e.g. form 14 also has "จำนวนครู/ผู้ดูแลเด็ก (คน) / ชาย", which is a teacher count, not a
+     * student one) or null to scan every column on the sheet.
+     *
+     * @param string[]|null $columnPaths
+     * @return array{male: float, female: float}
+     */
+    public function genderTotalsForColumns(string $formKey, string $sheetName, ?array $columnPaths, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $columns = $columnPaths ?? $pivot['columns'];
+        $male = 0.0;
+        $female = 0.0;
+        foreach ($pivot['rows'] as $row) {
+            foreach ($columns as $path) {
+                $v = $row[$path] ?? '';
+                if ($v === '' || !is_numeric($v)) {
+                    continue;
+                }
+                if (preg_match('/ชาย$/u', trim($path))) {
+                    $male += (float)$v;
+                } elseif (preg_match('/หญิง$/u', trim($path))) {
+                    $female += (float)$v;
+                }
+            }
+        }
+        return ['male' => $male, 'female' => $female];
+    }
+
+    /**
      * Count submission rows (not summed values) of one sheet's pivot(), grouped by dimension —
      * for sheets where "1 row = 1 unit" is itself the count (e.g. form 2's "ข้อมูลสถานศึกษา",
      * 1 row per school).
