@@ -7,6 +7,12 @@
 .filter-bar { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 12px 0; }
 .filter-bar .field { margin-bottom: 0; min-width: 220px; }
 
+/* แถวรวมบนสุดของตาราง (public_school_grade_table.php) — สไตล์เดียวกับ tfoot ตัวหนา/พื้นเทาอ่อน
+   ต่างกันแค่ position (แถวแรกใน tbody แทนที่จะเป็น tfoot ท้ายตาราง) ให้เห็นยอดรวมได้ทันทีไม่ต้อง
+   เลื่อนลงไปหาท้ายตารางที่อาจมีเป็นพันแถว เปลี่ยนตามผลค้นหา/กรองที่เลือกอยู่เสมอ (ไม่ใช่ยอดรวมทั้งหมด
+   ตายตัว) */
+.stats-table tr.row-total td { font-weight: 700; background: #f3f4f6; }
+
 /* ตารางสรุปยอดรวม (public_report_table.php) — จำกัดความสูงแล้ว scroll ได้ทั้ง 2 แกนในกรอบเดียว
    (ไม่ใช้ .table-scroll ตัวมาตรฐานของระบบตรง ๆ เพราะตัวนั้น scroll ได้แค่แนวนอน ถ้าตารางมีแถวเยอะ
    จนสูงเกินจอ scrollbar แนวนอนจะไปโผล่ท้ายตาราง ต้องเลื่อนหน้าจอลงไปสุดก่อนถึงจะเห็น/ใช้งานได้ —

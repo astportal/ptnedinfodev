@@ -176,6 +176,60 @@ foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
 $gradeTableRows = array_values($rowsByCode);
 usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school_name']));
 
+// รายการตัวเลือก dropdown "สังกัด/หน่วยงาน" และ "อำเภอ" — ดึงจากข้อมูลทั้งหมดก่อนกรอง (ไม่ใช่หลัง
+// กรอง) ไม่งั้นตัวเลือกจะหายไปเรื่อย ๆ เมื่อเลือกกรองแล้ว ทำให้เปลี่ยนไปเลือกตัวอื่นไม่ได้อีก
+$agencyOptions = [];
+$amphoeOptions = [];
+foreach ($gradeTableRows as $r) {
+    if ($r['agency_name'] !== '') {
+        $agencyOptions[$r['agency_name']] = true;
+    }
+    if ($r['amphoe'] !== '') {
+        $amphoeOptions[$r['amphoe']] = true;
+    }
+}
+$agencyOptions = array_keys($agencyOptions);
+$amphoeOptions = array_keys($amphoeOptions);
+sort($agencyOptions, SORT_STRING | SORT_FLAG_CASE);
+sort($amphoeOptions, SORT_STRING | SORT_FLAG_CASE);
+
+// ค้นหา/กรอง — ใช้ร่วมกันทั้งหน้าเว็บและ CSV export (export ที่ดาวน์โหลดจะตรงกับสิ่งที่กำลังดูอยู่
+// บนหน้าเว็บเสมอ) ค้นชื่อสถานศึกษาแบบ substring ไม่สนตัวพิมพ์เล็ก/ใหญ่ ส่วนสังกัด/อำเภอเป็น dropdown
+// เลือกค่าตรงตัวเป๊ะ (ไม่ใช่ substring) — ใช้ stripos() ธรรมดา ไม่ใช้ mb_stripos() เพราะภาษาไทยไม่มี
+// ตัวพิมพ์เล็ก/ใหญ่ให้ต้องแปลง และ strpos() ตระกูลนี้ทำงานถูกต้องกับ substring ของสตริง UTF-8 อยู่แล้ว
+// (ไม่ต้องพึ่ง extension mbstring ซึ่งไม่เคยมีจุดไหนในระบบนี้ใช้มาก่อนเลย ไม่อยากเพิ่ม dependency ใหม่)
+$searchName = trim($_GET['q'] ?? '');
+$filterAgency = trim($_GET['agency'] ?? '');
+$filterAmphoe = trim($_GET['amphoe'] ?? '');
+if ($searchName !== '' || $filterAgency !== '' || $filterAmphoe !== '') {
+    $gradeTableRows = array_values(array_filter($gradeTableRows, static function ($r) use ($searchName, $filterAgency, $filterAmphoe) {
+        if ($searchName !== '' && stripos($r['school_name'], $searchName) === false) {
+            return false;
+        }
+        if ($filterAgency !== '' && $r['agency_name'] !== $filterAgency) {
+            return false;
+        }
+        if ($filterAmphoe !== '' && $r['amphoe'] !== $filterAmphoe) {
+            return false;
+        }
+        return true;
+    }));
+}
+
+// แถวรวม — คำนวณจากผลลัพธ์ "หลัง" กรองเสมอ (เปลี่ยนตามสถานะการค้นหาตามที่ผู้ใช้งานขอ) แสดงไว้แถวบนสุด
+// ของตาราง
+$gradeTotals = ['grades' => [], 'nfe_total' => 0.0, 'private_nonformal_total' => 0.0];
+foreach ($gradeLabels as $label) {
+    $gradeTotals['grades'][$label] = 0.0;
+}
+foreach ($gradeTableRows as $r) {
+    foreach ($gradeLabels as $label) {
+        $gradeTotals['grades'][$label] += $r['grades'][$label];
+    }
+    $gradeTotals['nfe_total'] += $r['nfe_total'];
+    $gradeTotals['private_nonformal_total'] += $r['private_nonformal_total'];
+}
+
 // ก็อปมาจาก fmt_num() ใน public_report_data.php ตรง ๆ (ไม่ include ไฟล์นั้นเพราะตัวแปรชื่อชนกันตามที่
 // อธิบายไว้ข้างบน) — ถ้าแก้ตัวใดตัวหนึ่งต้องแก้อีกตัวให้ตรงกันด้วย
 function fmt_num($v): string

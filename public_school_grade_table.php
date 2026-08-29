@@ -43,13 +43,36 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
             <?php endforeach; ?>
           </select>
         </div>
+        <div class="field">
+          <label>ค้นหาชื่อสถานศึกษา</label>
+          <input type="text" name="q" value="<?= h($searchName) ?>" placeholder="เช่น บ้านตลาด">
+        </div>
+        <div class="field">
+          <label>สังกัด/หน่วยงาน</label>
+          <select name="agency">
+            <option value="">— ทั้งหมด —</option>
+            <?php foreach ($agencyOptions as $opt): ?>
+              <option value="<?= h($opt) ?>" <?= $filterAgency === $opt ? 'selected' : '' ?>><?= h($opt) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="field">
+          <label>อำเภอ</label>
+          <select name="amphoe">
+            <option value="">— ทั้งหมด —</option>
+            <?php foreach ($amphoeOptions as $opt): ?>
+              <option value="<?= h($opt) ?>" <?= $filterAmphoe === $opt ? 'selected' : '' ?>><?= h($opt) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <button class="btn" type="submit">ค้นหา</button>
       </form>
-      <p><a class="btn btn-secondary" href="public_school_grade_table_export.php?year=<?= h((string)$selectedYear) ?>" style="display:inline-block;">ดาวน์โหลด CSV</a></p>
+      <p><a class="btn btn-secondary" href="public_school_grade_table_export.php?<?= h(http_build_query(['year' => $selectedYear, 'q' => $searchName, 'agency' => $filterAgency, 'amphoe' => $filterAmphoe])) ?>" style="display:inline-block;">ดาวน์โหลด CSV (ตามผลค้นหาปัจจุบัน)</a></p>
     </div>
 
     <div class="card">
       <?php if (!$gradeTableRows): ?>
-        <p class="muted">ยังไม่มีข้อมูลสำหรับปีการศึกษานี้</p>
+        <p class="muted">ไม่พบสถานศึกษาที่ตรงกับเงื่อนไขค้นหานี้</p>
       <?php else: ?>
         <p class="muted">พบ <?= count($gradeTableRows) ?> สถานศึกษา</p>
         <div class="report-table-scroll">
@@ -68,6 +91,16 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
               </tr>
             </thead>
             <tbody>
+              <tr class="row-total">
+                <td colspan="2">รวม (ตามผลค้นหาปัจจุบัน)</td>
+                <td></td>
+                <td></td>
+                <?php foreach ($gradeLabels as $label): ?>
+                  <td class="num"><?= fmt_num($gradeTotals['grades'][$label]) ?></td>
+                <?php endforeach; ?>
+                <td class="num"><?= fmt_num($gradeTotals['nfe_total']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']) ?></td>
+              </tr>
               <?php foreach ($gradeTableRows as $row): ?>
                 <tr>
                   <td><code><?= h($row['school_code']) ?></code></td>
