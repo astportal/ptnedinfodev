@@ -82,6 +82,7 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                 <th rowspan="2">ชื่อสถานศึกษา</th>
                 <th rowspan="2">สังกัด/หน่วยงาน</th>
                 <th rowspan="2">อำเภอ</th>
+                <th class="num" rowspan="2">รวม</th>
                 <?php foreach ($gradeLabels as $label): ?>
                   <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
                 <?php endforeach; ?>
@@ -100,6 +101,7 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
             <tbody>
               <tr class="row-total">
                 <td colspan="4">รวม (ตามผลค้นหาปัจจุบัน)</td>
+                <td class="num"><?= fmt_num($gradeTotals['grand_total']) ?></td>
                 <?php foreach ($gradeLabels as $label): ?>
                   <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['male']) ?></td>
                   <td class="num"><?= fmt_num($gradeTotals['grades'][$label]['female']) ?></td>
@@ -114,6 +116,7 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <td><?= h($row['school_name']) ?></td>
                   <td><?= h($row['agency_name']) ?></td>
                   <td><?= h($row['amphoe']) ?></td>
+                  <td class="num"><?= fmt_num($row['grand_total']) ?></td>
                   <?php foreach ($gradeLabels as $label): ?>
                     <td class="num"><?= fmt_num($row['grades'][$label]['male']) ?></td>
                     <td class="num"><?= fmt_num($row['grades'][$label]['female']) ?></td>

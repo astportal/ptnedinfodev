@@ -186,6 +186,18 @@ foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
 $gradeTableRows = array_values($rowsByCode);
 usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school_name']));
 
+// คอลัมน์ "รวม" ต่อสถานศึกษา — ผลรวมทุกระดับชั้น (ชาย+หญิง) + ผู้เรียน สกร. (ชาย+หญิง) + ผู้เรียน
+// นอกระบบ คำนวณครั้งเดียวตรงนี้หลังข้อมูลทุกแหล่ง (ฟอร์ม 4/11/15) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้
+// ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณแทรกในแต่ละ pass ข้างบน
+foreach ($gradeTableRows as &$gtRow) {
+    $grandTotal = $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female'] + $gtRow['private_nonformal_total'];
+    foreach ($gradeLabels as $label) {
+        $grandTotal += $gtRow['grades'][$label]['male'] + $gtRow['grades'][$label]['female'];
+    }
+    $gtRow['grand_total'] = $grandTotal;
+}
+unset($gtRow);
+
 // รายการตัวเลือก dropdown "สังกัด/หน่วยงาน" และ "อำเภอ" — ดึงจากข้อมูลทั้งหมดก่อนกรอง (ไม่ใช่หลัง
 // กรอง) ไม่งั้นตัวเลือกจะหายไปเรื่อย ๆ เมื่อเลือกกรองแล้ว ทำให้เปลี่ยนไปเลือกตัวอื่นไม่ได้อีก
 $agencyOptions = [];
@@ -230,7 +242,7 @@ if ($searchName !== '' || $filterAgency || $filterAmphoe !== '') {
 
 // แถวรวม — คำนวณจากผลลัพธ์ "หลัง" กรองเสมอ (เปลี่ยนตามสถานะการค้นหาตามที่ผู้ใช้งานขอ) แสดงไว้แถวบนสุด
 // ของตาราง
-$gradeTotals = ['grades' => [], 'nfe_total' => ['male' => 0.0, 'female' => 0.0], 'private_nonformal_total' => 0.0];
+$gradeTotals = ['grades' => [], 'nfe_total' => ['male' => 0.0, 'female' => 0.0], 'private_nonformal_total' => 0.0, 'grand_total' => 0.0];
 foreach ($gradeLabels as $label) {
     $gradeTotals['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
 }
@@ -242,6 +254,7 @@ foreach ($gradeTableRows as $r) {
     $gradeTotals['nfe_total']['male'] += $r['nfe_total']['male'];
     $gradeTotals['nfe_total']['female'] += $r['nfe_total']['female'];
     $gradeTotals['private_nonformal_total'] += $r['private_nonformal_total'];
+    $gradeTotals['grand_total'] += $r['grand_total'];
 }
 
 // ก็อปมาจาก fmt_num() ใน public_report_data.php ตรง ๆ (ไม่ include ไฟล์นั้นเพราะตัวแปรชื่อชนกันตามที่

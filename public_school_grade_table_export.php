@@ -15,7 +15,7 @@ fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อ
 
 // ระดับชั้นและ "ผู้เรียน สกร." แยกชาย/หญิงเป็นคนละคอลัมน์ (เหมือนหน้าเว็บ) — "ผู้เรียนนอกระบบ" ยังเป็น
 // ยอดรวมเดียวไม่แยกเพศ (ดูเหตุผลใน public_school_grade_table_data.php ส่วนฟอร์ม 15)
-$header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ'];
+$header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
     $header[] = $label . ' (หญิง)';
@@ -26,7 +26,7 @@ $header[] = 'ผู้เรียนนอกระบบ';
 fputcsv($out, $header);
 
 foreach ($gradeTableRows as $row) {
-    $line = [$row['school_code'], $row['school_name'], $row['agency_name'], $row['amphoe']];
+    $line = [$row['school_code'], $row['school_name'], $row['agency_name'], $row['amphoe'], $row['grand_total']];
     foreach ($gradeLabels as $label) {
         $line[] = $row['grades'][$label]['male'];
         $line[] = $row['grades'][$label]['female'];
