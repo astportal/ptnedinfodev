@@ -66,6 +66,14 @@ $privateNonformalTeacherSheets = [
     ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนครู / ชาย', 'จำนวนครู / หญิง']],
 ];
 
+// ผู้ดูแลเด็กที่สถานรับเลี้ยงเด็กเอกชนสังกัด พมจ. (ฟอร์ม 16.2) — เฉพาะคอลัมน์ "จำนวนผู้ดูแลเด็ก..."
+// เท่านั้น (ไม่รวมคอลัมน์ "จำนวนเด็ก..." ในชีทเดียวกัน ซึ่งใช้ไปแล้วในตาราง "พมจ." ของตารางผู้เรียน
+// รายชั้น) — เพิ่มเมื่อ 2026-08-30 ตามคำขอผู้ใช้งาน
+$pmjColumns = [
+    'จำนวนผู้ดูแลเด็กช่วงอายุ 0-2 ปี / ชาย', 'จำนวนผู้ดูแลเด็กช่วงอายุ 0-2 ปี / หญิง',
+    'จำนวนผู้ดูแลเด็กช่วงอายุ  3-5 ปี / ชาย', 'จำนวนผู้ดูแลเด็กช่วงอายุ  3-5 ปี / หญิง',
+];
+
 /** แถวว่างเปล่า 1 แถว ให้เติมตอนพบ school_code ใหม่จากฟอร์ม 14/15 ที่ฟอร์ม 10.1 ไม่มี */
 function teacher_table_blank_row(string $schoolCode, string $schoolName, string $agencyName, string $amphoe): array
 {
@@ -77,6 +85,7 @@ function teacher_table_blank_row(string $schoolCode, string $schoolName, string 
         'teaching_total'  => ['male' => 0.0, 'female' => 0.0],
         'childcare_total' => ['male' => 0.0, 'female' => 0.0],
         'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
+        'pmj_total' => ['male' => 0.0, 'female' => 0.0],
     ];
 }
 
@@ -151,14 +160,41 @@ foreach ($privateNonformalTeacherSheets as [$formKey, $sheetName, $onlyColumns])
     }
 }
 
+// 4) ฟอร์ม 16.2 (ผู้ดูแลเด็กสถานรับเลี้ยงเด็กเอกชนสังกัด พมจ.) — โรงเรียนคนละกลุ่มกับฟอร์ม 10 เช่นกัน
+// join ด้วย school_code ที่จับคู่จากชื่อไว้แล้วตอน import (ดู match_school_code_by_name) แถวที่
+// จับคู่ไม่สำเร็จจะไม่มี school_code เลย ข้ามไปเหมือนแถวที่ขาด school_code ของฟอร์มอื่นทุกประการ
+$pivot16 = $reporting->pivot('16_pmj', 'พมจ-16.2', $selectedYear);
+foreach ($pivot16['rows'] as $r) {
+    $code = trim((string)($r['school_code'] ?? ''));
+    if ($code === '') {
+        continue;
+    }
+    if (!isset($rowsByCode[$code])) {
+        $rowsByCode[$code] = teacher_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''));
+    }
+    foreach ($pmjColumns as $path) {
+        $v = $r[$path] ?? '';
+        if ($v === '' || !is_numeric($v)) {
+            continue;
+        }
+        if (preg_match('/ชาย$/u', $path)) {
+            $rowsByCode[$code]['pmj_total']['male'] += (float)$v;
+        } elseif (preg_match('/หญิง$/u', $path)) {
+            $rowsByCode[$code]['pmj_total']['female'] += (float)$v;
+        }
+    }
+}
+
 $gradeTableRows = array_values($rowsByCode);
 usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school_name']));
 
 // คอลัมน์ "รวม" ต่อสถานศึกษา — ผลรวมครูผู้สอน (ชาย+หญิง) + ครู ศพด. (ชาย+หญิง) + ครูนอกระบบ (ชาย+หญิง)
+// + พมจ. (ชาย+หญิง)
 foreach ($gradeTableRows as &$gtRow) {
     $gtRow['grand_total'] = $gtRow['teaching_total']['male'] + $gtRow['teaching_total']['female']
         + $gtRow['childcare_total']['male'] + $gtRow['childcare_total']['female']
-        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female'];
+        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female']
+        + $gtRow['pmj_total']['male'] + $gtRow['pmj_total']['female'];
 }
 unset($gtRow);
 
@@ -203,6 +239,7 @@ $gradeTotals = [
     'teaching_total'  => ['male' => 0.0, 'female' => 0.0],
     'childcare_total' => ['male' => 0.0, 'female' => 0.0],
     'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
+    'pmj_total' => ['male' => 0.0, 'female' => 0.0],
     'grand_total' => 0.0,
 ];
 foreach ($gradeTableRows as $r) {
@@ -212,6 +249,8 @@ foreach ($gradeTableRows as $r) {
     $gradeTotals['childcare_total']['female'] += $r['childcare_total']['female'];
     $gradeTotals['private_nonformal_total']['male'] += $r['private_nonformal_total']['male'];
     $gradeTotals['private_nonformal_total']['female'] += $r['private_nonformal_total']['female'];
+    $gradeTotals['pmj_total']['male'] += $r['pmj_total']['male'];
+    $gradeTotals['pmj_total']['female'] += $r['pmj_total']['female'];
     $gradeTotals['grand_total'] += $r['grand_total'];
 }
 

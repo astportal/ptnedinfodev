@@ -88,6 +88,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                 <th class="num">ครู ศพด. (หญิง)</th>
                 <th class="num">ครูนอกระบบ (ชาย)</th>
                 <th class="num">ครูนอกระบบ (หญิง)</th>
+                <th class="num">พมจ. (ชาย)</th>
+                <th class="num">พมจ. (หญิง)</th>
               </tr>
             </thead>
             <tbody>
@@ -100,6 +102,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['female']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['pmj_total']['male']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['pmj_total']['female']) ?></td>
               </tr>
               <?php foreach ($gradeTableRows as $row): ?>
                 <tr>
@@ -114,6 +118,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                   <td class="num"><?= fmt_num($row['childcare_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']['female']) ?></td>
+                  <td class="num"><?= fmt_num($row['pmj_total']['male']) ?></td>
+                  <td class="num"><?= fmt_num($row['pmj_total']['female']) ?></td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
