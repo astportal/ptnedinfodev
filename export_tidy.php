@@ -25,7 +25,7 @@ $selectedYearInt = $showAllYears ? null : (int)$selectedYear;
 $reporting = new Reporting($db);
 $identityLabels = [
     'seq_no' => 'ลำดับที่', 'school_code' => 'รหัสสถานศึกษา', 'agency_name' => 'สังกัด/หน่วยงาน',
-    'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล',
+    'school_name' => 'ชื่อสถานศึกษา', 'amphoe' => 'อำเภอ', 'tambon' => 'ตำบล', 'department' => 'กระทรวง',
 ];
 
 // tidiesBySheet: storage sheet_name => tidyRows() result — single-sheet mode has exactly one

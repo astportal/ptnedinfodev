@@ -11,19 +11,20 @@ class Reporting
     }
 
     /**
-     * Look up สังกัด/หน่วยงาน (area_name), อำเภอ, ตำบล from schools_master (ทำเนียบโรงเรียน) for
-     * every distinct (academic_year, school_code) pair actually present among $submissions, so
-     * pivot()/tidyRows() can prefer the roster's values over whatever an agency typed into the
-     * survey file. Only rows with a non-blank school_code participate — sheets that don't have a
-     * school_code identity column (forms 1, 13, 14 — see forms/registry.php) are left untouched.
-     * Wrapped in try/catch like every other schools_master query (migration 003 may not be applied
-     * yet on some servers — degrade to "no overrides" rather than break the page).
+     * Look up สังกัด/หน่วยงาน (area_name), อำเภอ, ตำบล, กระทรวง (department) from schools_master
+     * (ทำเนียบโรงเรียน) for every distinct (academic_year, school_code) pair actually present among
+     * $submissions, so pivot()/tidyRows() can prefer the roster's values over whatever an agency
+     * typed into the survey file — and add "กระทรวง" as a new field the survey files never had at
+     * all. Only rows with a non-blank school_code participate — sheets that don't have a school_code
+     * identity column (forms 1, 13, 14 — see forms/registry.php) are left untouched. Wrapped in
+     * try/catch like every other schools_master query (migration 003 may not be applied yet on some
+     * servers — degrade to "no overrides" rather than break the page).
      *
      * Public so other pages that query `submissions` directly (e.g. review.php's "ต้องตรวจสอบ"
      * lists) can apply the same override consistently instead of showing the raw uploaded value.
      *
      * @param array<int,array<string,mixed>> $submissions rows from the `submissions` table
-     * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string}> keyed "{academic_year}|{school_code}"
+     * @return array<string,array{amphoe:?string,tambon:?string,area_name:?string,department:?string}> keyed "{academic_year}|{school_code}"
      */
     public function schoolMasterOverrides(array $submissions): array
     {
@@ -45,7 +46,7 @@ class Reporting
                 $codeList = array_keys($codes);
                 $placeholders = implode(',', array_fill(0, count($codeList), '?'));
                 $stmt = $this->db->prepare(
-                    "SELECT school_code, amphoe, tambon, area_name FROM schools_master
+                    "SELECT school_code, amphoe, tambon, area_name, department FROM schools_master
                      WHERE academic_year = ? AND school_code IN ($placeholders)"
                 );
                 $stmt->execute(array_merge([$year], $codeList));
@@ -132,6 +133,8 @@ class Reporting
                 'school_name'   => $s['school_name'],
                 'amphoe'        => ($master['amphoe'] ?? '') !== '' ? $master['amphoe'] : $s['amphoe'],
                 'tambon'        => ($master['tambon'] ?? '') !== '' ? $master['tambon'] : $s['tambon'],
+                // กระทรวง — ไม่มีคอลัมน์นี้ในไฟล์สำรวจฟอร์มไหนเลย มาจากทำเนียบโรงเรียนเท่านั้น
+                'department'    => $master['department'] ?? '',
                 'academic_year' => $s['academic_year'],
                 '_needs_review' => [],
             ];
@@ -220,6 +223,8 @@ class Reporting
             if (($master['tambon'] ?? '') !== '') {
                 $s['tambon'] = $master['tambon'];
             }
+            // กระทรวง — ไม่มีคอลัมน์นี้ในไฟล์สำรวจฟอร์มไหนเลย มาจากทำเนียบโรงเรียนเท่านั้น
+            $s['department'] = $master['department'] ?? '';
             $byId[$s['id']] = $s;
             // เรียง "ลำดับที่" ใหม่เองตามลำดับการแสดงผลจริง เหมือน pivot() — ไม่ใช้ค่าที่อัปโหลดมา
             // (1 submission ออกได้หลายแถวในตารางแบบยาวนี้ ทุกแถวของ submission เดียวกันใช้เลขเดียวกัน)
@@ -317,6 +322,7 @@ class Reporting
                 'school_name'   => $s['school_name'],
                 'amphoe'        => $s['amphoe'],
                 'tambon'        => $s['tambon'],
+                'department'    => $s['department'],
                 'academic_year' => $s['academic_year'],
             ];
             foreach ($extraById[$v['submission_id']] as $field => $val) {
@@ -347,6 +353,7 @@ class Reporting
                 'school_name'   => $s['school_name'],
                 'amphoe'        => $s['amphoe'],
                 'tambon'        => $s['tambon'],
+                'department'    => $s['department'],
                 'academic_year' => $s['academic_year'],
             ];
             foreach ($extraById[$id] as $field => $val) {
