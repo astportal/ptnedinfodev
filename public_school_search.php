@@ -62,7 +62,7 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
 </head>
 <body>
 <div class="topbar">
-  <a href="public_report.php">สถิติการศึกษาจังหวัดปัตตานี</a>
+  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
     <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม (กราฟ)</a>
     <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>

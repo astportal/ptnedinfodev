@@ -17,7 +17,7 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
 </head>
 <body>
 <div class="topbar">
-  <a href="public_report.php">สถิติการศึกษาจังหวัดปัตตานี</a>
+  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
     <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม (กราฟ)</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>">ตารางสรุปยอดรวม</a>

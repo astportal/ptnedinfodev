@@ -330,7 +330,7 @@ function render_report_start(string $activePage): void
 </head>
 <body>
 <div class="topbar">
-  <a href="public_report.php">สถิติการศึกษาจังหวัดปัตตานี</a>
+  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
     <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม (กราฟ)</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
