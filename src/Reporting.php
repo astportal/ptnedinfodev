@@ -144,6 +144,45 @@ class Reporting
     }
 
     /**
+     * Sum every numeric column of one sheet's pivot() into buckets keyed by a *middle* slice of
+     * each column_path — for a sheet whose header levels are context you want to drop (e.g. grade)
+     * / the category you actually want / a dimension you want to collapse across (e.g. gender),
+     * joined with " / " (see buildColumnPaths() in Importer.php — same join everywhere). Drops
+     * $dropFirst levels from the start and $dropLast from the end of each column_path before using
+     * whatever remains as the bucket key; a column left with nothing after dropping (e.g. a
+     * single-level "รวม" subtotal column when $dropLast >= 1) is skipped entirely, so a baked-in
+     * total column never needs special-casing by name.
+     *
+     * Two concrete shapes this sheet family uses:
+     *   - "category / gender" (e.g. form 8.2 disability types) -> dropFirst 0, dropLast 1
+     *   - "grade / category / gender" (e.g. form 7 dropout reasons) -> dropFirst 1, dropLast 1
+     *
+     * @return array<string,float> category => sum
+     */
+    public function sumByColumnPathParts(string $formKey, string $sheetName, int $dropFirst, int $dropLast, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $totals = [];
+        foreach ($pivot['columns'] as $path) {
+            $parts = array_map('trim', explode(' / ', $path));
+            $len = count($parts) - $dropFirst - $dropLast;
+            if ($len <= 0) {
+                continue; // nothing left after dropping — e.g. a lone "รวม" subtotal column
+            }
+            $category = implode(' / ', array_slice($parts, $dropFirst, $len));
+            $sum = 0.0;
+            foreach ($pivot['rows'] as $row) {
+                $v = $row[$path] ?? '';
+                if ($v !== '' && is_numeric($v)) {
+                    $sum += (float)$v;
+                }
+            }
+            $totals[$category] = ($totals[$category] ?? 0.0) + $sum;
+        }
+        return $totals;
+    }
+
+    /**
      * Count submission rows (not summed values) of one sheet's pivot(), grouped by dimension —
      * for sheets where "1 row = 1 unit" is itself the count (e.g. form 2's "ข้อมูลสถานศึกษา",
      * 1 row per school).

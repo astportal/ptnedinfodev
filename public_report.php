@@ -168,11 +168,73 @@ foreach ($genderSheets as [$formKey, $sheetName, $onlyColumns]) {
 }
 $genderTotal = $genderMale + $genderFemale;
 
+// สัดส่วนครูชาย:หญิง — เหตุผลเดียวกับสัดส่วนนักเรียนข้างบน ใช้ชุดชีทเดียวกับตัวเลข "จำนวนครู/
+// บุคลากร" แต่สลับไปใช้คอลัมน์แยกเพศดิบแทนคอลัมน์ "รวม"/คอลัมน์เดี่ยวของฟอร์ม 10.1 (ไม่มี "รวม"
+// ปนอยู่จึงส่ง null ให้สแกนทุกคอลัมน์ได้เลยเหมือนฟอร์ม 4)
+$teacherGenderSheets = [
+    ['10_teachers', '10.1ทุกสังกัด', null],
+    ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
+        'จำนวนครู/ผู้ดูแลเด็ก (คน) / ชาย', 'จำนวนครู/ผู้ดูแลเด็ก (คน) / หญิง',
+    ]],
+    ['15_private_nonformal', '15.1', ['จำนวนผู้สอน / ชาย', 'จำนวนผู้สอน / หญิง']],
+    ['15_private_nonformal', '15.2', ['จำนวนโต๊ะครู / ชาย', 'จำนวนโต๊ะครู / หญิง']],
+    ['15_private_nonformal', '15.3', ['จำนวนผู้สอน / ชาย', 'จำนวนผู้สอน / หญิง']],
+    ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนครู / ชาย', 'จำนวนครู / หญิง']],
+];
+$teacherGenderMale = 0.0;
+$teacherGenderFemale = 0.0;
+foreach ($teacherGenderSheets as [$formKey, $sheetName, $onlyColumns]) {
+    $tg = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear);
+    $teacherGenderMale += $tg['male'];
+    $teacherGenderFemale += $tg['female'];
+}
+$teacherGenderTotal = $teacherGenderMale + $teacherGenderFemale;
+
 // อัตราส่วนนักเรียนต่อครู — ยอดรวมทั้งจังหวัด ไม่ขึ้นกับมิติที่เลือก (ผลรวมทุกกลุ่มเท่ากันไม่ว่าจะ
 // แยกตามมิติไหน) จึงใช้ $dataByMetric ที่คำนวณไว้แล้วสำหรับตารางหลักได้เลย ไม่ต้อง query ซ้ำ
 $totalStudents = array_sum($dataByMetric['students']);
 $totalTeachers = array_sum($dataByMetric['teachers']);
 $studentTeacherRatio = $totalTeachers > 0 ? $totalStudents / $totalTeachers : null;
+
+// นักเรียนออกกลางคัน แยกตามสาเหตุ — รวมทั้ง 6 ชีท (แยกตามช่วงชั้นเดิม) เข้าด้วยกัน ตัดมิติ "ชั้นปี"
+// (level แรก) กับ "เพศ" (level สุดท้าย) ออก เหลือแค่ "สาเหตุ" — ดู Reporting::sumByColumnPathParts
+$dropoutByReason = [];
+foreach ($metrics['dropout']['sheets'] as [$formKey, $sheetName]) {
+    foreach ($reporting->sumByColumnPathParts($formKey, $sheetName, 1, 1, $selectedYear) as $reason => $v) {
+        $dropoutByReason[$reason] = ($dropoutByReason[$reason] ?? 0) + $v;
+    }
+}
+arsort($dropoutByReason);
+
+// นักเรียนพิการ แยกตามประเภทความพิการ — ชีท 8.2 มีคอลัมน์ "รวม" ปนท้ายตาราง (ตัด dropLast=1 ออก
+// พอสำหรับคอลัมน์แยกเพศปกติ แต่คอลัมน์ "รวม" เป็น 1 ระดับเดียวจะเหลือ 0 ระดับหลังตัด ถูกข้ามอัตโนมัติ)
+$disabilityByType = $reporting->sumByColumnPathParts('8_disability', '8.2 ประเภทความพิการ', 0, 1, $selectedYear);
+arsort($disabilityByType);
+
+// 5 อำเภอที่มีอัตรานักเรียนออกกลางคันสูงสุด/ต่ำสุด (% ของนักเรียนทั้งหมดในอำเภอนั้น) — ใช้ยอด
+// นักเรียนต่ออำเภอที่คำนวณไว้แล้วด้านบน ($studentsByAmphoe) คู่กับยอดออกกลางคันต่ออำเภอ เพื่อไม่ให้
+// อำเภอที่มีนักเรียนเยอะเป็นทุนเดิมดูน่ากังวลเกินจริงเมื่อเทียบกับอำเภอเล็ก ๆ
+$dropoutByAmphoe = compute_metric_totals($reporting, 'dropout', $metrics['dropout'], 'amphoe', $selectedYear);
+$dropoutRateByAmphoe = [];
+foreach ($studentsByAmphoe as $amphoe => $studentCount) {
+    if ($amphoe === 'ไม่ระบุ' || $studentCount <= 0) {
+        continue; // หารด้วยศูนย์ไม่ได้ และ "ไม่ระบุ" ไม่ใช่อำเภอจริงที่เทียบกันได้
+    }
+    $dropoutRateByAmphoe[$amphoe] = ($dropoutByAmphoe[$amphoe] ?? 0) / $studentCount * 100;
+}
+arsort($dropoutRateByAmphoe);
+$dropoutRateTop5 = array_slice($dropoutRateByAmphoe, 0, 5, true);
+$dropoutRateBottom5 = array_slice(array_reverse($dropoutRateByAmphoe, true), 0, 5, true);
+
+// แนวโน้มจำนวนนักเรียนรายปีการศึกษา — ยอดรวมทั้งจังหวัดของทุกปีที่มีข้อมูล เรียงปีน้อยไปมาก (จะมี
+// แค่ 1-2 แท่งถ้าระบบเพิ่งเริ่มเก็บข้อมูลไม่กี่ปี ก็ยังแสดงผลได้ปกติ ไม่พัง รอข้อมูลปีต่อ ๆ ไปสะสม)
+$studentsByYear = [];
+$yearsAscending = $availableYears;
+sort($yearsAscending);
+foreach ($yearsAscending as $y) {
+    $yearTotals = compute_metric_totals($reporting, 'students', $metrics['students'], 'amphoe', (int)$y);
+    $studentsByYear[(string)$y] = array_sum($yearTotals);
+}
 
 function fmt_num($v): string
 {
@@ -181,6 +243,31 @@ function fmt_num($v): string
     }
     return number_format((float)$v);
 }
+
+// เรนเดอร์กราฟแท่งแนวนอน 1 ชุด — ใช้ร่วมกันทุกกราฟแท่งในหน้านี้ (สังกัด/อำเภอ/ปีการศึกษา/สาเหตุ/
+// ประเภทความพิการ/อัตราออกกลางคัน) ต่างกันแค่ข้อมูลกับวิธี format ค่า (จำนวนคน หรือ เปอร์เซ็นต์)
+function render_bar_chart(array $data, callable $formatValue): void
+{
+    if (!$data) {
+        echo '<p class="muted">ยังไม่มีข้อมูล</p>';
+        return;
+    }
+    $max = max(array_map('abs', $data));
+    echo '<div class="bar-chart">';
+    foreach ($data as $label => $value) {
+        $pct = $max > 0 ? abs($value) / $max * 100 : 0;
+        $valueLabel = $formatValue($value);
+        echo '<div class="bar-row">';
+        echo '<div class="bar-label">' . h((string)$label) . '</div>';
+        echo '<div class="bar-wrap"><div class="bar-fill" style="width: ' . h(number_format($pct, 2, '.', '')) . '%"'
+            . ' title="' . h($label . ': ' . $valueLabel) . '"></div></div>';
+        echo '<div class="bar-value">' . h($valueLabel) . '</div>';
+        echo '</div>';
+    }
+    echo '</div>';
+}
+$fmtPeople = static fn($v) => fmt_num($v) . ' คน';
+$fmtPercent = static fn($v) => number_format((float)$v, 1) . '%';
 ?>
 <!doctype html>
 <html lang="th">
@@ -229,6 +316,9 @@ function fmt_num($v): string
   .bar-wrap { flex: 1; min-width: 0; }
   .bar-fill { height: 20px; max-height: 20px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 3px; }
   .bar-value { width: 72px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
+  /* กราฟแท่งที่อยู่ในคอลัมน์แคบ (kpi-col เช่น อันดับสูงสุด/ต่ำสุด) ต้องย่อป้ายชื่อ/ค่าให้พอดีคอลัมน์ */
+  .kpi-col .bar-label { width: 96px; font-size: 12px; }
+  .kpi-col .bar-value { width: 56px; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -289,6 +379,27 @@ function fmt_num($v): string
         <?php endif; ?>
       </div>
       <div class="kpi-col">
+        <h3>สัดส่วนครูชาย : หญิง</h3>
+        <?php if ($teacherGenderTotal <= 0): ?>
+          <p class="muted">ยังไม่มีข้อมูล</p>
+        <?php else: ?>
+          <?php
+            $tMalePct = $teacherGenderMale / $teacherGenderTotal * 100;
+            $tFemalePct = $teacherGenderFemale / $teacherGenderTotal * 100;
+          ?>
+          <div class="gender-bar">
+            <div class="gender-seg male" style="width: <?= h(number_format($tMalePct, 2, '.', '')) ?>%"
+                 title="ชาย: <?= h(fmt_num($teacherGenderMale)) ?> คน (<?= h(number_format($tMalePct, 1)) ?>%)"></div>
+            <div class="gender-seg female" style="width: <?= h(number_format($tFemalePct, 2, '.', '')) ?>%"
+                 title="หญิง: <?= h(fmt_num($teacherGenderFemale)) ?> คน (<?= h(number_format($tFemalePct, 1)) ?>%)"></div>
+          </div>
+          <div class="gender-legend">
+            <span class="legend-item"><span class="swatch male"></span>ชาย <?= h(fmt_num($teacherGenderMale)) ?> คน (<?= h(number_format($tMalePct, 1)) ?>%)</span>
+            <span class="legend-item"><span class="swatch female"></span>หญิง <?= h(fmt_num($teacherGenderFemale)) ?> คน (<?= h(number_format($tFemalePct, 1)) ?>%)</span>
+          </div>
+        <?php endif; ?>
+      </div>
+      <div class="kpi-col">
         <h3>อัตราส่วนนักเรียนต่อครู/บุคลากร</h3>
         <?php if ($studentTeacherRatio === null): ?>
           <p class="muted">ยังไม่มีข้อมูล</p>
@@ -300,35 +411,41 @@ function fmt_num($v): string
     </div>
   </div>
 
+  <div class="card viz-root">
+    <h2>จำนวนนักเรียน/ผู้เรียน รายปีการศึกษา</h2>
+    <?php render_bar_chart($studentsByYear, $fmtPeople); ?>
+  </div>
+
   <?php
     $barCharts = [
-        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept],
-        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe],
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept, 'fmt' => $fmtPeople],
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe, 'fmt' => $fmtPeople],
+        ['title' => 'นักเรียนออกกลางคัน แยกตามสาเหตุ', 'data' => $dropoutByReason, 'fmt' => $fmtPeople],
+        ['title' => 'นักเรียนพิการ แยกตามประเภทความพิการ', 'data' => $disabilityByType, 'fmt' => $fmtPeople],
     ];
   ?>
   <?php foreach ($barCharts as $chart): ?>
     <div class="card viz-root">
       <h2><?= h($chart['title']) ?></h2>
-      <?php if (!$chart['data']): ?>
-        <p class="muted">ยังไม่มีข้อมูล</p>
-      <?php else: ?>
-        <?php $max = max($chart['data']); ?>
-        <div class="bar-chart">
-          <?php foreach ($chart['data'] as $label => $value): ?>
-            <?php $pct = $max > 0 ? $value / $max * 100 : 0; ?>
-            <div class="bar-row">
-              <div class="bar-label"><?= h($label) ?></div>
-              <div class="bar-wrap">
-                <div class="bar-fill" style="width: <?= h(number_format($pct, 2, '.', '')) ?>%"
-                     title="<?= h($label) ?>: <?= h(fmt_num($value)) ?> คน"></div>
-              </div>
-              <div class="bar-value"><?= h(fmt_num($value)) ?></div>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
+      <?php render_bar_chart($chart['data'], $chart['fmt']); ?>
     </div>
   <?php endforeach; ?>
+
+  <div class="card viz-root">
+    <h2>อำเภอที่มีอัตรานักเรียนออกกลางคันสูงสุด/ต่ำสุด (% ของนักเรียนในอำเภอนั้น)</h2>
+    <p class="muted">คำนวณจากนักเรียนออกกลางคันหารด้วยจำนวนนักเรียนทั้งหมดในอำเภอเดียวกัน ไม่ใช่จำนวนดิบ
+      เพื่อไม่ให้อำเภอที่มีนักเรียนเยอะดูน่ากังวลเกินจริงเทียบกับอำเภอเล็ก ๆ</p>
+    <div class="kpi-row">
+      <div class="kpi-col">
+        <h3>5 อันดับสูงสุด</h3>
+        <?php render_bar_chart($dropoutRateTop5, $fmtPercent); ?>
+      </div>
+      <div class="kpi-col">
+        <h3>5 อันดับต่ำสุด</h3>
+        <?php render_bar_chart($dropoutRateBottom5, $fmtPercent); ?>
+      </div>
+    </div>
+  </div>
 
   <div class="card">
     <h2>สรุปยอดรวมแยกตาม<?= h($dimensions[$selectedDimension]) ?></h2>
