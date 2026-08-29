@@ -11,6 +11,21 @@ render_report_start('charts');
       <div class="card viz-root">
         <div class="kpi-row">
           <div class="kpi-col">
+            <h3>จำนวนผู้เรียนทั้งหมด</h3>
+            <div class="stat-value"><?= h(fmt_num($totalStudents)) ?></div>
+            <div class="stat-sub">คน</div>
+          </div>
+          <div class="kpi-col">
+            <h3>จำนวนผู้สอนทั้งหมด</h3>
+            <div class="stat-value"><?= h(fmt_num($totalTeachers)) ?></div>
+            <div class="stat-sub">คน</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card viz-root">
+        <div class="kpi-row">
+          <div class="kpi-col">
             <h3>สัดส่วนนักเรียนชาย : หญิง</h3>
             <?php if ($genderTotal <= 0): ?>
               <p class="muted">ยังไม่มีข้อมูล</p>
