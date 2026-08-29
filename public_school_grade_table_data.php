@@ -85,11 +85,14 @@ $gradeLabels = array_keys($gradeGroups);
 // ชีทฟอร์ม 15 ที่นับเป็น "ผู้เรียนนอกระบบ" — ชุดเดียวกับที่ใช้ใน public_report_data.php metric
 // "จำนวนนักเรียน" (เฉพาะส่วนของฟอร์ม 15) คัดลอกมาตรงนี้แทนการ include ไฟล์นั้น เพราะไฟล์นั้นมี
 // ตัวแปรชื่อชนกันหลายตัว ($reporting, $selectedYear, $navQuery ฯลฯ) ไม่ได้ออกแบบให้ include ซ้อนกัน
+// — ทุกชีทแยกชาย/หญิงได้ครบ (แก้เมื่อ 2026-08-30: ชีท "สช.วิชาชีพ-ครู-นร." เดิมเข้าใจผิดว่ามีแค่
+// คอลัมน์ "รวม" อย่างเดียว ตรวจ reference_templates/ ใหม่แล้วมีคอลัมน์ชาย/หญิงแยกให้จริง เหมือนที่
+// แก้ไปแล้วฝั่งครูผู้สอนใน public_teacher_grade_table_data.php)
 $privateNonformalSheets = [
     ['15_private_nonformal', '15.1', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
     ['15_private_nonformal', '15.2', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
     ['15_private_nonformal', '15.3', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
-    ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนนักเรียน / รวม']],
+    ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนนักเรียน / ชาย', 'จำนวนนักเรียน / หญิง']],
 ];
 
 /** แถวว่างเปล่า 1 แถว (ทุกระดับชั้น = 0) ให้เติมตอนพบ school_code ใหม่จากฟอร์ม 11/15 ที่ฟอร์ม 4 ไม่มี */
@@ -101,7 +104,7 @@ function grade_table_blank_row(string $schoolCode, string $schoolName, string $a
         'agency_name' => $agencyName,
         'amphoe'      => $amphoe,
         'nfe_total'   => ['male' => 0.0, 'female' => 0.0],
-        'private_nonformal_total' => 0.0,
+        'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
     ];
     foreach ($gradeLabels as $label) {
         $row['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
@@ -157,11 +160,9 @@ foreach ($pivot111['rows'] as $r) {
 }
 
 // 3) ฟอร์ม 15 (ผู้เรียนนอกระบบ) — โรงเรียนคนละกลุ่มกับฟอร์ม 4 เช่นกัน รวมยอดข้าม 4 ชีท แต่ละชีทมี
-// คอลัมน์อื่นปนอยู่ด้วย ต้องระบุ onlyColumns กันนับซ้ำ เหมือนที่ทำไว้ใน public_report_data.php —
-// **คอลัมน์นี้ไม่แยกชาย/หญิงเหมือน 2 คอลัมน์ข้างบน** เพราะชีท "สช.วิชาชีพ-ครู-นร." (1 ใน 4 ชีทที่รวม
-// อยู่นี้) มีแค่คอลัมน์ "จำนวนนักเรียน / รวม" อย่างเดียว ไม่ได้แยกเพศไว้เลยในต้นฉบับ (อีก 3 ชีทแยกเพศ
-// ได้ปกติ) ถ้าแยกเฉพาะ 3 ชีทแล้วทิ้งชีทที่ 4 ไป ยอดรวมจะไม่ตรงกับตัวเลขที่เคยแสดงไว้ก่อนหน้า — เลือก
-// คงเป็นยอดรวมเดียวไว้ก่อน ไม่เดาแบ่งสัดส่วน
+// คอลัมน์อื่นปนอยู่ด้วย ต้องระบุ onlyColumns กันนับซ้ำ — แยกชาย/หญิงได้ครบทั้ง 4 ชีท (แก้เมื่อ
+// 2026-08-30 — ดูเหตุผลที่ $privateNonformalSheets ด้านบน) จับคู่ด้วย regex ปลาย column_path แบบ
+// เดียวกับที่ใช้กับฟอร์ม 11.1
 foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
     $pivot15 = $reporting->pivot($formKey, $sheetName, $selectedYear);
     foreach ($pivot15['rows'] as $r) {
@@ -172,14 +173,17 @@ foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
         if (!isset($rowsByCode[$code])) {
             $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
         }
-        $sum = 0.0;
         foreach ($onlyColumns as $path) {
             $v = $r[$path] ?? '';
-            if ($v !== '' && is_numeric($v)) {
-                $sum += (float)$v;
+            if ($v === '' || !is_numeric($v)) {
+                continue;
+            }
+            if (preg_match('/ชาย$/u', $path)) {
+                $rowsByCode[$code]['private_nonformal_total']['male'] += (float)$v;
+            } elseif (preg_match('/หญิง$/u', $path)) {
+                $rowsByCode[$code]['private_nonformal_total']['female'] += (float)$v;
             }
         }
-        $rowsByCode[$code]['private_nonformal_total'] += $sum;
     }
 }
 
@@ -190,7 +194,8 @@ usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school
 // นอกระบบ คำนวณครั้งเดียวตรงนี้หลังข้อมูลทุกแหล่ง (ฟอร์ม 4/11/15) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้
 // ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณแทรกในแต่ละ pass ข้างบน
 foreach ($gradeTableRows as &$gtRow) {
-    $grandTotal = $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female'] + $gtRow['private_nonformal_total'];
+    $grandTotal = $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female']
+        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female'];
     foreach ($gradeLabels as $label) {
         $grandTotal += $gtRow['grades'][$label]['male'] + $gtRow['grades'][$label]['female'];
     }
@@ -242,7 +247,12 @@ if ($searchName !== '' || $filterAgency || $filterAmphoe !== '') {
 
 // แถวรวม — คำนวณจากผลลัพธ์ "หลัง" กรองเสมอ (เปลี่ยนตามสถานะการค้นหาตามที่ผู้ใช้งานขอ) แสดงไว้แถวบนสุด
 // ของตาราง
-$gradeTotals = ['grades' => [], 'nfe_total' => ['male' => 0.0, 'female' => 0.0], 'private_nonformal_total' => 0.0, 'grand_total' => 0.0];
+$gradeTotals = [
+    'grades' => [],
+    'nfe_total' => ['male' => 0.0, 'female' => 0.0],
+    'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
+    'grand_total' => 0.0,
+];
 foreach ($gradeLabels as $label) {
     $gradeTotals['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
 }
@@ -253,7 +263,8 @@ foreach ($gradeTableRows as $r) {
     }
     $gradeTotals['nfe_total']['male'] += $r['nfe_total']['male'];
     $gradeTotals['nfe_total']['female'] += $r['nfe_total']['female'];
-    $gradeTotals['private_nonformal_total'] += $r['private_nonformal_total'];
+    $gradeTotals['private_nonformal_total']['male'] += $r['private_nonformal_total']['male'];
+    $gradeTotals['private_nonformal_total']['female'] += $r['private_nonformal_total']['female'];
     $gradeTotals['grand_total'] += $r['grand_total'];
 }
 

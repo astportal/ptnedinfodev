@@ -85,13 +85,15 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
                 <?php endforeach; ?>
                 <th class="num" colspan="2" style="text-align:center;">ผู้เรียน สกร.</th>
-                <th class="num" rowspan="2">ผู้เรียนนอกระบบ</th>
+                <th class="num" colspan="2" style="text-align:center;">ผู้เรียนนอกระบบ</th>
               </tr>
               <tr>
                 <?php foreach ($gradeLabels as $label): ?>
                   <th class="num">ชาย</th>
                   <th class="num">หญิง</th>
                 <?php endforeach; ?>
+                <th class="num">ชาย</th>
+                <th class="num">หญิง</th>
                 <th class="num">ชาย</th>
                 <th class="num">หญิง</th>
               </tr>
@@ -106,7 +108,8 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                 <?php endforeach; ?>
                 <td class="num"><?= fmt_num($gradeTotals['nfe_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['nfe_total']['female']) ?></td>
-                <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['male']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['female']) ?></td>
               </tr>
               <?php foreach ($gradeTableRows as $row): ?>
                 <tr>
@@ -121,7 +124,8 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <?php endforeach; ?>
                   <td class="num"><?= fmt_num($row['nfe_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['nfe_total']['female']) ?></td>
-                  <td class="num"><?= fmt_num($row['private_nonformal_total']) ?></td>
+                  <td class="num"><?= fmt_num($row['private_nonformal_total']['male']) ?></td>
+                  <td class="num"><?= fmt_num($row['private_nonformal_total']['female']) ?></td>
                 </tr>
               <?php endforeach; ?>
             </tbody>

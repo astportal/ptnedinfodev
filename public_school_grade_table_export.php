@@ -13,8 +13,7 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อความไทยถูกต้อง
 
-// ระดับชั้นและ "ผู้เรียน สกร." แยกชาย/หญิงเป็นคนละคอลัมน์ (เหมือนหน้าเว็บ) — "ผู้เรียนนอกระบบ" ยังเป็น
-// ยอดรวมเดียวไม่แยกเพศ (ดูเหตุผลใน public_school_grade_table_data.php ส่วนฟอร์ม 15)
+// ระดับชั้น, "ผู้เรียน สกร." และ "ผู้เรียนนอกระบบ" แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
 $header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
@@ -22,7 +21,8 @@ foreach ($gradeLabels as $label) {
 }
 $header[] = 'ผู้เรียน สกร. (ชาย)';
 $header[] = 'ผู้เรียน สกร. (หญิง)';
-$header[] = 'ผู้เรียนนอกระบบ';
+$header[] = 'ผู้เรียนนอกระบบ (ชาย)';
+$header[] = 'ผู้เรียนนอกระบบ (หญิง)';
 fputcsv($out, $header);
 
 foreach ($gradeTableRows as $row) {
@@ -33,7 +33,8 @@ foreach ($gradeTableRows as $row) {
     }
     $line[] = $row['nfe_total']['male'];
     $line[] = $row['nfe_total']['female'];
-    $line[] = $row['private_nonformal_total'];
+    $line[] = $row['private_nonformal_total']['male'];
+    $line[] = $row['private_nonformal_total']['female'];
     fputcsv($out, $line);
 }
 
