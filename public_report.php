@@ -300,6 +300,36 @@ function fmt_num($v): string
     </div>
   </div>
 
+  <?php
+    $barCharts = [
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept],
+        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe],
+    ];
+  ?>
+  <?php foreach ($barCharts as $chart): ?>
+    <div class="card viz-root">
+      <h2><?= h($chart['title']) ?></h2>
+      <?php if (!$chart['data']): ?>
+        <p class="muted">ยังไม่มีข้อมูล</p>
+      <?php else: ?>
+        <?php $max = max($chart['data']); ?>
+        <div class="bar-chart">
+          <?php foreach ($chart['data'] as $label => $value): ?>
+            <?php $pct = $max > 0 ? $value / $max * 100 : 0; ?>
+            <div class="bar-row">
+              <div class="bar-label"><?= h($label) ?></div>
+              <div class="bar-wrap">
+                <div class="bar-fill" style="width: <?= h(number_format($pct, 2, '.', '')) ?>%"
+                     title="<?= h($label) ?>: <?= h(fmt_num($value)) ?> คน"></div>
+              </div>
+              <div class="bar-value"><?= h(fmt_num($value)) ?></div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+
   <div class="card">
     <h2>สรุปยอดรวมแยกตาม<?= h($dimensions[$selectedDimension]) ?></h2>
     <?php if (!$groups): ?>
@@ -338,36 +368,6 @@ function fmt_num($v): string
       </div>
     <?php endif; ?>
   </div>
-
-  <?php
-    $barCharts = [
-        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามต้นสังกัด', 'data' => $studentsByDept],
-        ['title' => 'จำนวนนักเรียน/ผู้เรียน แยกตามอำเภอ', 'data' => $studentsByAmphoe],
-    ];
-  ?>
-  <?php foreach ($barCharts as $chart): ?>
-    <div class="card viz-root">
-      <h2><?= h($chart['title']) ?></h2>
-      <?php if (!$chart['data']): ?>
-        <p class="muted">ยังไม่มีข้อมูล</p>
-      <?php else: ?>
-        <?php $max = max($chart['data']); ?>
-        <div class="bar-chart">
-          <?php foreach ($chart['data'] as $label => $value): ?>
-            <?php $pct = $max > 0 ? $value / $max * 100 : 0; ?>
-            <div class="bar-row">
-              <div class="bar-label"><?= h($label) ?></div>
-              <div class="bar-wrap">
-                <div class="bar-fill" style="width: <?= h(number_format($pct, 2, '.', '')) ?>%"
-                     title="<?= h($label) ?>: <?= h(fmt_num($value)) ?> คน"></div>
-              </div>
-              <div class="bar-value"><?= h(fmt_num($value)) ?></div>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-    </div>
-  <?php endforeach; ?>
 </div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
   <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี<br>
