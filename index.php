@@ -57,6 +57,7 @@ try {
     <a href="review.php">รายการที่ต้องตรวจสอบ<?= $needsReviewTotal > 0 ? " ({$needsReviewTotal})" : '' ?></a>
     <a href="uploads_history.php">ประวัติการอัปโหลด</a>
     <a href="schools_master.php">ทำเนียบโรงเรียน</a>
+    <a href="public_report.php" target="_blank">สมุดสถิติ (สาธารณะ)</a>
     <a href="settings.php">ตั้งค่า</a>
     <span class="muted"><?= h(Auth::displayName()) ?></span>
     &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>

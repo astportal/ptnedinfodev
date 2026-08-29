@@ -61,6 +61,90 @@ class Reporting
     }
 
     /**
+     * Sum every numeric value column of one sheet's pivot(), grouped by one identity dimension
+     * (agency_name / department / amphoe — all already resolved against schools_master by
+     * pivot() itself). Used to build province-wide headline totals for the public statistics
+     * page (public_report.php). Only wire a sheet in here if it's been checked by hand against
+     * reference_templates/ to have no baked-in "รวม"-style subtotal column mixed in with the raw
+     * categories — summing those together would double-count.
+     *
+     * @return array<string,float> dimension value (or "ไม่ระบุ" if blank) => sum
+     */
+    public function groupedTotal(string $formKey, string $sheetName, string $dimension, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $totals = [];
+        foreach ($pivot['rows'] as $row) {
+            $group = trim((string)($row[$dimension] ?? ''));
+            if ($group === '') {
+                $group = 'ไม่ระบุ';
+            }
+            $sum = 0.0;
+            foreach ($pivot['columns'] as $path) {
+                $v = $row[$path] ?? '';
+                if ($v !== '' && is_numeric($v)) {
+                    $sum += (float)$v;
+                }
+            }
+            $totals[$group] = ($totals[$group] ?? 0.0) + $sum;
+        }
+        return $totals;
+    }
+
+    /**
+     * Count submission rows (not summed values) of one sheet's pivot(), grouped by dimension —
+     * for sheets where "1 row = 1 unit" is itself the count (e.g. form 2's "ข้อมูลสถานศึกษา",
+     * 1 row per school).
+     *
+     * @return array<string,int>
+     */
+    public function groupedCount(string $formKey, string $sheetName, string $dimension, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $counts = [];
+        foreach ($pivot['rows'] as $row) {
+            $group = trim((string)($row[$dimension] ?? ''));
+            if ($group === '') {
+                $group = 'ไม่ระบุ';
+            }
+            $counts[$group] = ($counts[$group] ?? 0) + 1;
+        }
+        return $counts;
+    }
+
+    /**
+     * Count schools straight from schools_master (ทำเนียบโรงเรียน) — the authoritative roster for
+     * that academic year, not dependent on which forms happened to be submitted — grouped by
+     * dimension. Degrades to an empty array (like every other schools_master query) if migration
+     * 003 isn't applied yet or no roster has been uploaded for that year.
+     *
+     * @return array<string,int>
+     */
+    public function schoolCountByDimension(string $dimension, int $academicYear): array
+    {
+        $columnMap = ['agency_name' => 'area_name', 'department' => 'department', 'amphoe' => 'amphoe'];
+        $column = $columnMap[$dimension] ?? null;
+        if ($column === null) {
+            return [];
+        }
+        try {
+            $stmt = $this->db->prepare("SELECT $column AS grp, COUNT(*) AS cnt FROM schools_master WHERE academic_year = ? GROUP BY $column");
+            $stmt->execute([$academicYear]);
+            $counts = [];
+            while ($row = $stmt->fetch()) {
+                $group = trim((string)($row['grp'] ?? ''));
+                if ($group === '') {
+                    $group = 'ไม่ระบุ';
+                }
+                $counts[$group] = ($counts[$group] ?? 0) + (int)$row['cnt'];
+            }
+            return $counts;
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * @return array{columns: array<int,string>, extra_identity_fields: string[], rows: array<int, array<string,mixed>>, totals: array<string,string>}
      *   columns: col_index => column_path, in original column order
      *   extra_identity_fields: names of any non-standard identity fields this sheet uses (e.g.
