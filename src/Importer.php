@@ -296,10 +296,13 @@ class Importer
                 // school_code — the same agency_name + school_name + extra_identity together
                 // (NULL-safe), so multiple rows that share an agency (e.g. several centers under
                 // one อปท., or several age-bracket rows for one agency) don't overwrite each
-                // other; re-imports still replace the previous submission for that same exact
-                // entity, but a different academic_year is always a separate submission — data
-                // from past years is never touched by uploading a new year's file.
-                $this->deleteExistingSubmission($formKey, $storageSheetName, $academicYear, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $extraJson);
+                // other; or — when there's neither school_code nor agency_name (an area-level
+                // sheet identified by ตำบล/อำเภอ instead, e.g. form 16.1 — no per-agency identity
+                // at all) — the same tambon + amphoe. Re-imports still replace the previous
+                // submission for that same exact entity, but a different academic_year is always
+                // a separate submission — data from past years is never touched by uploading a
+                // new year's file.
+                $this->deleteExistingSubmission($formKey, $storageSheetName, $academicYear, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $standard['tambon'], $standard['amphoe'], $extraJson);
 
                 $ins = $this->db->prepare(
                     'INSERT INTO submissions
@@ -566,7 +569,7 @@ class Importer
         return [$raw, true];
     }
 
-    private function deleteExistingSubmission(string $formKey, string $sheetName, int $academicYear, ?string $schoolCode, ?string $agencyName, ?string $schoolName, ?string $extraJson): void
+    private function deleteExistingSubmission(string $formKey, string $sheetName, int $academicYear, ?string $schoolCode, ?string $agencyName, ?string $schoolName, ?string $tambon, ?string $amphoe, ?string $extraJson): void
     {
         if ($schoolCode) {
             $del = $this->db->prepare(
@@ -583,6 +586,15 @@ class Importer
                  AND agency_name <=> :an AND school_name <=> :snm AND extra_identity <=> :ei'
             );
             $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'an' => $agencyName, 'snm' => $schoolName, 'ei' => $extraJson]);
+        } elseif ($tambon) {
+            // Area-level sheet with no per-agency identity at all (e.g. form 16.1 — one row per
+            // ตำบล, no school_code and no agency_name column in the template) — ตำบล+อำเภอ is the
+            // closest thing to a stable row identity, so use that as the dedup key instead.
+            $del = $this->db->prepare(
+                'DELETE FROM submissions WHERE form_key = :fk AND sheet_name = :sn AND academic_year = :yr
+                 AND school_code IS NULL AND agency_name IS NULL AND tambon <=> :tb AND amphoe <=> :am'
+            );
+            $del->execute(['fk' => $formKey, 'sn' => $sheetName, 'yr' => $academicYear, 'tb' => $tambon, 'am' => $amphoe]);
         }
     }
 
