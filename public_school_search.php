@@ -64,7 +64,7 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
 <div class="topbar">
   <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
-    <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม (กราฟ)</a>
+    <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม</a>
     <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_search.php?<?= h($reportNavQuery) ?>" class="active">ค้นหารหัสสถานศึกษา</a>
     <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>">ผู้เรียนรายชั้น</a>

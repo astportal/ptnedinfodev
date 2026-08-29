@@ -20,7 +20,7 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
 <div class="topbar">
   <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
-    <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม (กราฟ)</a>
+    <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม</a>
     <a href="public_report_table.php?<?= h($navQuery) ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_search.php?<?= h($navQuery) ?>">ค้นหารหัสสถานศึกษา</a>
     <a href="public_school_grade_table.php?<?= h($navQuery) ?>">ผู้เรียนรายชั้น</a>
