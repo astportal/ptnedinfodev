@@ -261,6 +261,17 @@ class Importer
         $hiddenRowsSkipped = 0;
         $this->db->beginTransaction();
         try {
+            // Prepared once, reused for every row — the connection has ATTR_EMULATE_PREPARES off
+            // (real server-side prepares), so preparing this fresh inside the row loop meant one
+            // extra PREPARE round-trip per row for no benefit (identical SQL every time). Sheets
+            // with many rows barely noticed, but it compounds badly on forms with lots of value
+            // columns too (see $insValues below) — see ai_note.md "อัปโหลดฟอร์ม 4 ค้าง/timeout".
+            $insSubmission = $this->db->prepare(
+                'INSERT INTO submissions
+                    (upload_id, form_key, sheet_name, academic_year, row_seq, seq_no, school_code, school_code_issue, agency_name, school_name, amphoe, tambon, extra_identity)
+                 VALUES
+                    (:upload_id, :form_key, :sheet_name, :academic_year, :row_seq, :seq_no, :school_code, :school_code_issue, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
+            );
             for ($r = $headerRows + 1; $r <= $maxRow; $r++) {
                 if (isset($hiddenRows[$r])) {
                     $hiddenRowsSkipped++;
@@ -357,13 +368,7 @@ class Importer
                 // new year's file.
                 $this->deleteExistingSubmission($formKey, $storageSheetName, $academicYear, $standard['school_code'], $standard['agency_name'], $standard['school_name'], $standard['tambon'], $standard['amphoe'], $extraJson);
 
-                $ins = $this->db->prepare(
-                    'INSERT INTO submissions
-                        (upload_id, form_key, sheet_name, academic_year, row_seq, seq_no, school_code, school_code_issue, agency_name, school_name, amphoe, tambon, extra_identity)
-                     VALUES
-                        (:upload_id, :form_key, :sheet_name, :academic_year, :row_seq, :seq_no, :school_code, :school_code_issue, :agency_name, :school_name, :amphoe, :tambon, :extra_identity)'
-                );
-                $ins->execute([
+                $insSubmission->execute([
                     'upload_id'         => $uploadId,
                     'form_key'          => $formKey,
                     'sheet_name'        => $storageSheetName,
@@ -380,10 +385,14 @@ class Importer
                 ]);
                 $submissionId = (int)$this->db->lastInsertId();
 
-                $valStmt = $this->db->prepare(
-                    'INSERT INTO submission_values (submission_id, col_index, column_path, value, needs_review)
-                     VALUES (:sid, :ci, :cp, :val, :nr)'
-                );
+                // Batch every non-blank cell of this row into ONE multi-row INSERT instead of one
+                // execute() per cell — with ATTR_EMULATE_PREPARES off (real server-side prepares,
+                // see src/Db.php) each execute() is its own DB round-trip. Forms with lots of value
+                // columns (e.g. form 4 — 37 grade levels × 2 genders = 74 columns) were issuing up
+                // to ~74 round-trips per school on top of the row's own INSERT, which multiplied
+                // across every school in the province was slow enough to time out the whole upload
+                // request (see ai_note.md "อัปโหลดฟอร์ม 4 ค้าง/timeout" — เพิ่มเมื่อ 2026-08-30).
+                $cellTuples = []; // [col_index, column_path, value, needs_review(0|1)]
                 foreach ($columnPaths as $c => $path) {
                     if ($mergeExtraCols !== null && $c === self::MERGED_COLUMN_INDEX) {
                         // Combine every extra/unrecognized column's cell for this row into one
@@ -402,7 +411,7 @@ class Importer
                         if ($needsReview) {
                             $needsReviewCount++;
                         }
-                        $valStmt->execute(['sid' => $submissionId, 'ci' => $c, 'cp' => $path, 'val' => $val, 'nr' => $needsReview ? 1 : 0]);
+                        $cellTuples[] = [$c, $path, $val, $needsReview ? 1 : 0];
                         continue;
                     }
                     if (isset($hiddenCols[$c])) {
@@ -421,7 +430,19 @@ class Importer
                     if ($needsReview) {
                         $needsReviewCount++;
                     }
-                    $valStmt->execute(['sid' => $submissionId, 'ci' => $c, 'cp' => $path, 'val' => $val, 'nr' => $needsReview ? 1 : 0]);
+                    $cellTuples[] = [$c, $path, $val, $needsReview ? 1 : 0];
+                }
+                if ($cellTuples) {
+                    $placeholders = implode(', ', array_fill(0, count($cellTuples), '(?, ?, ?, ?, ?)'));
+                    $params = [];
+                    foreach ($cellTuples as [$ci, $cp, $val, $nr]) {
+                        array_push($params, $submissionId, $ci, $cp, $val, $nr);
+                    }
+                    $valStmt = $this->db->prepare(
+                        "INSERT INTO submission_values (submission_id, col_index, column_path, value, needs_review)
+                         VALUES $placeholders"
+                    );
+                    $valStmt->execute($params);
                 }
 
                 $rowsImported++;
