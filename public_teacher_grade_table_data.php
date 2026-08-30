@@ -115,12 +115,19 @@ foreach ($pivot10['rows'] as $r) {
 }
 
 // 2) ฟอร์ม 14 (ครู/ผู้ดูแลเด็ก ศพด.) — โรงเรียนคนละกลุ่มกับฟอร์ม 10 เลย (ศพด.ไม่กรอกฟอร์ม 10) เติมแถว
-// ใหม่ถ้ายังไม่เคยเจอ school_code นี้มาก่อน แยกชาย/หญิงตรง ๆ ตามคอลัมน์ที่ระบุไว้
+// ใหม่ถ้ายังไม่เคยเจอ school_code นี้มาก่อน แยกชาย/หญิงตรง ๆ ตามคอลัมน์ที่ระบุไว้ — บางแถวในชีทนี้
+// "รูปแบบการศึกษา" (จากทำเนียบโรงเรียน) ไม่ใช่ "ศูนย์พัฒนาเด็ก" จริง (สถานศึกษาที่กรอกฟอร์ม 10 อยู่แล้ว
+// แต่หน่วยงานกรอกฟอร์ม 14 ซ้ำมาด้วยโดยเข้าใจผิด) ต้องข้ามแถวเหล่านั้น ไม่งั้นจะนับครู/ผู้ดูแลเด็กซ้ำกับ
+// ฟอร์ม 10 — เหตุผล/เงื่อนไขเดียวกับฝั่งผู้เรียนใน public_school_grade_table_data.php และ
+// public_report_data.php ($onlyChildcareCenterRows) เพิ่มเมื่อ 2026-08-30 ตามคำขอผู้ใช้งาน
 [$childcareMaleCol, $childcareFemaleCol] = $childcareColumns;
 $pivot14 = $reporting->pivot('14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', $selectedYear);
 foreach ($pivot14['rows'] as $r) {
     $code = trim((string)($r['school_code'] ?? ''));
     if ($code === '') {
+        continue;
+    }
+    if (trim((string)($r['education_form'] ?? '')) !== 'ศูนย์พัฒนาเด็ก') {
         continue;
     }
     if (!isset($rowsByCode[$code])) {

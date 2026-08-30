@@ -1192,10 +1192,14 @@ Drive/Dropbox) แบบยังไม่ sync ลงเครื่องห�
   เอง) จึงเพิ่ม `if (trim($r['education_form'] ?? '') !== 'ศูนย์พัฒนาเด็ก') continue;` ก่อนเข้าลูปรวม
   `childcare_total` ตรง ๆ (เงื่อนไขเดียวกัน คัดลอกมาเพราะไฟล์นี้กับ public_report_data.php ไม่ include
   ซ้อนกัน — แพทเทิร์นเดียวกับ `$privateNonformalSheets` ที่คัดลอกไว้แล้ว)
-* **ไม่ได้แก้ฝั่งครูผู้สอน** (`$metrics['teachers']`, `$teacherGenderSheets`,
-  `public_teacher_grade_table_data.php`) เพราะผู้ใช้ระบุขอบเขตแค่ "ผู้เรียน/เด็กเล็ก" เท่านั้น — ถ้าพบ
-  ปัญหานับซ้ำแบบเดียวกันฝั่งจำนวนครู/ผู้ดูแลเด็กของฟอร์ม 14 ในอนาคต ให้ใช้แพทเทิร์นเดียวกันนี้แก้ (ส่ง
-  `$onlyChildcareCenterRows` เดียวกันเป็น element ที่ 4 ของ tuple ฟอร์ม 14 ในจุดนั้น ๆ)
+* **อัปเดต (แก้ต่อทันที 2026-08-30)**: ผู้ใช้ยืนยันว่าฝั่งครูผู้สอนก็เจอปัญหานับซ้ำแบบเดียวกันจริง —
+  แก้ตามแพทเทิร์นเดิมทุกจุด:
+  * `public_report_data.php`: เพิ่ม `$onlyChildcareCenterRows` เป็น element ที่ 4 ของ tuple ฟอร์ม 14
+    ทั้งใน `$metrics['teachers']['sheets']` และ `$teacherGenderSheets` (ก่อนหน้านี้ตัวเดียวกันใช้กับ
+    ฝั่งผู้เรียนแล้ว — ใช้ closure เดียวกันซ้ำ ไม่ต้องประกาศใหม่)
+  * `public_teacher_grade_table_data.php`: เพิ่ม
+    `if (trim($r['education_form'] ?? '') !== 'ศูนย์พัฒนาเด็ก') continue;` ก่อนรวม `childcare_total`
+    ในลูป `pivot14['rows']` (เหมือน `public_school_grade_table_data.php` ฝั่งผู้เรียนเป๊ะ)
 * ทดสอบไม่ได้จริงบนเครื่อง dev เหมือนเดิม ตรวจแค่ syntax balance เท่านั้น
 
 ### ข้อจำกัดของเครื่องมือพัฒนา (สำหรับ AI ที่มาทำงานต่อ)

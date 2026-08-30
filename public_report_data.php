@@ -126,10 +126,12 @@ $metrics = [
         // — รวมเข้ามาด้วยตามคำขอผู้ใช้งาน (2026-08-29) เฉพาะ 2 คอลัมน์นี้เท่านั้น (ไม่รวมคอลัมน์
         // เด็กเล็ก หรือคอลัมน์แยกวุฒิการศึกษาของครู ซึ่งเป็นการแจกแจงซ้ำของ 2 คอลัมน์นี้อยู่แล้ว
         // ถ้ารวมด้วยจะนับครูคนเดิมซ้ำสอง)
+        // เฉพาะแถวที่ "รูปแบบการศึกษา" = "ศูนย์พัฒนาเด็ก" เท่านั้น (เหตุผลเดียวกับ metric "students"
+        // ด้านบน — แถวอื่นในชีทเดียวกันซ้ำกับฟอร์ม 10 — เพิ่มเมื่อ 2026-08-30)
         ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
             'จำนวนครู/ผู้ดูแลเด็ก (คน) / ชาย',
             'จำนวนครู/ผู้ดูแลเด็ก (คน) / หญิง',
-        ]],
+        ], $onlyChildcareCenterRows],
         // โรงเรียนเอกชนนอกระบบ (ฟอร์ม 15) — เหตุผลเดียวกับ "จำนวนนักเรียน" ข้างบน ใช้เฉพาะคอลัมน์
         // ผู้สอน/โต๊ะครู (ไม่รวมคอลัมน์ผู้เรียนในชีทเดียวกัน) — ใช้คอลัมน์ ชาย/หญิง แยกกันทุกชีทรวมถึง
         // "สช.วิชาชีพ-ครู-นร." ด้วย (แก้เมื่อ 2026-08-29 — เดิมเข้าใจผิดว่าชีทนี้มีแค่คอลัมน์ "รวม"
@@ -270,9 +272,10 @@ $teacherGenderSheets = [
     // ใช้ $teachingColumns ตัวเดียวกับ metric "teachers" (ไม่รวมผู้บริหาร/บุคลากรสนับสนุน) ไม่งั้น
     // ยอดรวมชาย+หญิงของกราฟนี้จะไม่เท่ากับ $totalTeachers ที่ใช้ในตารางสรุป/tile อัตราส่วน
     ['10_teachers', '10.1ทุกสังกัด', $teachingColumns],
+    // เฉพาะแถว "รูปแบบการศึกษา" = "ศูนย์พัฒนาเด็ก" เท่านั้น (เหตุผลเดียวกับฝั่งผู้เรียนด้านบน)
     ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
         'จำนวนครู/ผู้ดูแลเด็ก (คน) / ชาย', 'จำนวนครู/ผู้ดูแลเด็ก (คน) / หญิง',
-    ]],
+    ], $onlyChildcareCenterRows],
     ['15_private_nonformal', '15.1', ['จำนวนผู้สอน / ชาย', 'จำนวนผู้สอน / หญิง']],
     ['15_private_nonformal', '15.2', ['จำนวนโต๊ะครู / ชาย', 'จำนวนโต๊ะครู / หญิง']],
     ['15_private_nonformal', '15.3', ['จำนวนผู้สอน / ชาย', 'จำนวนผู้สอน / หญิง']],
@@ -284,8 +287,10 @@ $teacherGenderSheets = [
 ];
 $teacherGenderMale = 0.0;
 $teacherGenderFemale = 0.0;
-foreach ($teacherGenderSheets as [$formKey, $sheetName, $onlyColumns]) {
-    $tg = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear);
+foreach ($teacherGenderSheets as $tgs) {
+    [$formKey, $sheetName, $onlyColumns] = $tgs;
+    $rowFilter = $tgs[3] ?? null;
+    $tg = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear, $rowFilter);
     $teacherGenderMale += $tg['male'];
     $teacherGenderFemale += $tg['female'];
 }
