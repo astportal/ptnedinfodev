@@ -48,6 +48,17 @@ $navQuery = http_build_query(['year' => $selectedYear, 'dim' => $selectedDimensi
 // ผู้สอน" ในหน้านี้ตรงกับตารางครูผู้สอน (public_teacher_grade_table.php) เป๊ะ — เพิ่มเมื่อ 2026-08-29
 // (ก่อนหน้านี้ metric นี้เคยรวมทุกตำแหน่งของฟอร์ม 10.1 รวมผู้บริหาร/บุคลากรสนับสนุนด้วย ตัวเลขเลย
 // ไม่ตรงกับตารางครูผู้สอน ผู้ใช้ขอให้แก้ให้สอดคล้องกัน)
+// ฟอร์ม 14 ("14.ข้อมูลศูนย์พัฒนาเด็กเล็ก") มีบางแถวที่ "ต้นสังกัด" ไม่ใช่ ศพด. จริง (เช่น สถานศึกษาที่
+// กรอกฟอร์ม 4 อยู่แล้วแต่หน่วยงานกรอกฟอร์ม 14 ซ้ำมาด้วยโดยเข้าใจผิด) ถ้ารวมแถวเหล่านั้นเข้าไปด้วยจะนับ
+// ผู้เรียนซ้ำกับตารางที่ 4 — ผู้ใช้ยืนยันว่าคอลัมน์ "รูปแบบการศึกษา" (education_form, มาจากทำเนียบ
+// โรงเรียนเท่านั้น ไม่ใช่คอลัมน์ในไฟล์สำรวจ) ของศูนย์พัฒนาเด็กเล็กจริงจะเป็นค่า "ศูนย์พัฒนาเด็ก" เป๊ะ
+// ใช้กรองแถวฟอร์ม 14 ก่อนรวมยอดผู้เรียนทุกจุด (เพิ่มเมื่อ 2026-08-30 ตามคำขอผู้ใช้งาน) — แถวที่ทำเนียบ
+// ยังไม่มีคอลัมน์นี้ (migration 005 ยังไม่รัน) หรือจับคู่ school_code ไม่ได้เลย จะถูกตัดออกไปด้วย
+// (ปลอดภัยไว้ก่อน ไม่นับถ้าพิสูจน์ไม่ได้ว่าเป็น ศพด. จริง)
+$onlyChildcareCenterRows = static function (array $row): bool {
+    return trim((string)($row['education_form'] ?? '')) === 'ศูนย์พัฒนาเด็ก';
+};
+
 $teachingColumns = [
     'ครูที่ปฏิบัติการสอน(1) / ข้าราชการ(2) / ชาย', 'ครูที่ปฏิบัติการสอน(1) / ข้าราชการ(2) / หญิง',
     'ครูที่ปฏิบัติการสอน(1) / พนักงาน(3) / ชาย', 'ครูที่ปฏิบัติการสอน(1) / พนักงาน(3) / หญิง',
@@ -71,12 +82,14 @@ $metrics = [
         // เดียวกับที่ $genderSheets ด้านล่างและ public_school_grade_table_data.php ใช้ ให้ยอดรวมตรง
         // กันทุกจุดในระบบเสมอ (ไม่มีจุดไหนอ้างอิงคอลัมน์ "รวม"/"รวมทั้งสิ้น" ของฟอร์มไหนเป็นแหล่งข้อมูล
         // โดยตรงอีกต่อไปทั้งระบบ ณ วันที่แก้)
+        // เฉพาะแถวที่ "รูปแบบการศึกษา" (จากทำเนียบโรงเรียน) = "ศูนย์พัฒนาเด็ก" เท่านั้น (ดู
+        // $onlyChildcareCenterRows ด้านบน) — แถวอื่นในชีทเดียวกันซ้ำกับตารางที่ 4 (เพิ่มเมื่อ 2026-08-30)
         ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
             'เด็กเล็ก / อายุ 2 ปี / ชาย', 'เด็กเล็ก / อายุ 2 ปี / หญิง',
             'เด็กเล็ก / อายุ 3 ปี / ชาย', 'เด็กเล็ก / อายุ 3 ปี / หญิง',
             'เด็กเล็ก / อายุ 4 ปี / ชาย', 'เด็กเล็ก / อายุ 4 ปี / หญิง',
             'เด็กเล็ก / อายุ 5 ปี / ชาย', 'เด็กเล็ก / อายุ 5 ปี / หญิง',
-        ]],
+        ], $onlyChildcareCenterRows],
         // โรงเรียนเอกชนนอกระบบ (ฟอร์ม 15) ก็ไม่ได้กรอกฟอร์ม 4 เช่นกัน — รวมเข้ามาด้วยตามคำขอ
         // ผู้ใช้งาน (2026-08-29) เฉพาะคอลัมน์ "จำนวนผู้เรียน"/"จำนวนนักเรียน" เท่านั้น (ไม่รวม
         // คอลัมน์ผู้สอน/โต๊ะครูในชีทเดียวกัน) — ชีท "สช.วิชาชีพ-ครู-นร." ใช้แค่คอลัมน์ "รวม" อย่าง
@@ -171,8 +184,9 @@ function compute_metric_totals(Reporting $reporting, string $key, array $metricD
     foreach ($metricDef['sheets'] as $sheet) {
         [$formKey, $sheetName] = $sheet;
         $onlyColumns = $sheet[2] ?? null; // null = sum every value column (see groupedTotal())
+        $rowFilter = $sheet[3] ?? null; // optional predicate — see groupedTotalForColumns() in Reporting.php
         $sheetTotals = $onlyColumns !== null
-            ? $reporting->groupedTotalForColumns($formKey, $sheetName, $onlyColumns, $dimension, $academicYear)
+            ? $reporting->groupedTotalForColumns($formKey, $sheetName, $onlyColumns, $dimension, $academicYear, $rowFilter)
             : $reporting->groupedTotal($formKey, $sheetName, $dimension, $academicYear);
         foreach ($sheetTotals as $g => $v) {
             $totals[$g] = ($totals[$g] ?? 0) + $v;
@@ -221,12 +235,13 @@ arsort($studentsByEducationForm);
 // แยกเพศดิบแทนคอลัมน์ "รวม"/"รวมทั้งสิ้น" (ซึ่งไม่มีเพศให้แยก) — ดู Reporting::genderTotalsForColumns
 $genderSheets = [
     ['4_students', '4.จำนวนผู้เรียน', null],
+    // เฉพาะแถว "รูปแบบการศึกษา" = "ศูนย์พัฒนาเด็ก" เท่านั้น (เหตุผลเดียวกับ $metrics['students'] ด้านบน)
     ['14_childcare_centers', '14.ข้อมูลศูนย์พัฒนาเด็กเล็ก', [
         'เด็กเล็ก / อายุ 2 ปี / ชาย', 'เด็กเล็ก / อายุ 2 ปี / หญิง',
         'เด็กเล็ก / อายุ 3 ปี / ชาย', 'เด็กเล็ก / อายุ 3 ปี / หญิง',
         'เด็กเล็ก / อายุ 4 ปี / ชาย', 'เด็กเล็ก / อายุ 4 ปี / หญิง',
         'เด็กเล็ก / อายุ 5 ปี / ชาย', 'เด็กเล็ก / อายุ 5 ปี / หญิง',
-    ]],
+    ], $onlyChildcareCenterRows],
     ['15_private_nonformal', '15.1', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
     ['15_private_nonformal', '15.2', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
     ['15_private_nonformal', '15.3', ['จำนวนผู้เรียน / ชาย', 'จำนวนผู้เรียน / หญิง']],
@@ -239,8 +254,10 @@ $genderSheets = [
 ];
 $genderMale = 0.0;
 $genderFemale = 0.0;
-foreach ($genderSheets as [$formKey, $sheetName, $onlyColumns]) {
-    $g = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear);
+foreach ($genderSheets as $gs) {
+    [$formKey, $sheetName, $onlyColumns] = $gs;
+    $rowFilter = $gs[3] ?? null;
+    $g = $reporting->genderTotalsForColumns($formKey, $sheetName, $onlyColumns, $selectedYear, $rowFilter);
     $genderMale += $g['male'];
     $genderFemale += $g['female'];
 }

@@ -98,13 +98,20 @@ class Reporting
      * "รวมทั้งสิ้น" subtotal column, instead of re-summing its parts and double-counting).
      *
      * @param string[] $columnPaths
+     * @param (callable(array<string,mixed>):bool)|null $rowFilter optional predicate — skip any row
+     *   it returns false for before summing (e.g. keep only rows whose resolved schools_master
+     *   fields match a specific dimension, so a sheet covering several agency types at once doesn't
+     *   double-count rows already reported elsewhere — see form 14 usage in public_report_data.php)
      * @return array<string,float> dimension value (or "ไม่ระบุ" if blank) => sum
      */
-    public function groupedTotalForColumns(string $formKey, string $sheetName, array $columnPaths, string $dimension, ?int $academicYear = null): array
+    public function groupedTotalForColumns(string $formKey, string $sheetName, array $columnPaths, string $dimension, ?int $academicYear = null, ?callable $rowFilter = null): array
     {
         $pivot = $this->pivot($formKey, $sheetName, $academicYear);
         $totals = [];
         foreach ($pivot['rows'] as $row) {
+            if ($rowFilter !== null && !$rowFilter($row)) {
+                continue;
+            }
             $group = trim((string)($row[$dimension] ?? ''));
             if ($group === '') {
                 $group = 'ไม่ระบุ';
@@ -131,15 +138,20 @@ class Reporting
      * student one) or null to scan every column on the sheet.
      *
      * @param string[]|null $columnPaths
+     * @param (callable(array<string,mixed>):bool)|null $rowFilter optional predicate — see
+     *   groupedTotalForColumns() above for why/when this is needed
      * @return array{male: float, female: float}
      */
-    public function genderTotalsForColumns(string $formKey, string $sheetName, ?array $columnPaths, ?int $academicYear = null): array
+    public function genderTotalsForColumns(string $formKey, string $sheetName, ?array $columnPaths, ?int $academicYear = null, ?callable $rowFilter = null): array
     {
         $pivot = $this->pivot($formKey, $sheetName, $academicYear);
         $columns = $columnPaths ?? $pivot['columns'];
         $male = 0.0;
         $female = 0.0;
         foreach ($pivot['rows'] as $row) {
+            if ($rowFilter !== null && !$rowFilter($row)) {
+                continue;
+            }
             foreach ($columns as $path) {
                 $v = $row[$path] ?? '';
                 if ($v === '' || !is_numeric($v)) {
