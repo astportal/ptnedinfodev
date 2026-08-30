@@ -13,14 +13,15 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อความไทยถูกต้อง
 
-// ระดับชั้น, "เด็ก ศพด.", "ผู้เรียน สกร.", "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
+// ระดับชั้น, "ผู้เรียน สกร.", "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ — "เด็ก ศพด."
+// เป็นยอดรวมเดียวไม่แยกเพศ (ใช้คอลัมน์ "รวมทั้งสิ้น" ตรง ๆ เหมือนหน้าภาพรวม/ตารางสรุป ไม่มีข้อมูลเพศ
+// ที่เชื่อถือได้ให้ใช้ — ดูเหตุผลใน public_school_grade_table_data.php)
 $header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
     $header[] = $label . ' (หญิง)';
 }
-$header[] = 'เด็ก ศพด. (ชาย)';
-$header[] = 'เด็ก ศพด. (หญิง)';
+$header[] = 'เด็ก ศพด.';
 $header[] = 'ผู้เรียน สกร. (ชาย)';
 $header[] = 'ผู้เรียน สกร. (หญิง)';
 $header[] = 'ผู้เรียนนอกระบบ (ชาย)';
@@ -35,8 +36,7 @@ foreach ($gradeTableRows as $row) {
         $line[] = $row['grades'][$label]['male'];
         $line[] = $row['grades'][$label]['female'];
     }
-    $line[] = $row['childcare_total']['male'];
-    $line[] = $row['childcare_total']['female'];
+    $line[] = $row['childcare_total'];
     $line[] = $row['nfe_total']['male'];
     $line[] = $row['nfe_total']['female'];
     $line[] = $row['private_nonformal_total']['male'];

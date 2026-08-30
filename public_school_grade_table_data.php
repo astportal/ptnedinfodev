@@ -100,19 +100,16 @@ $privateNonformalSheets = [
     ['15_private_nonformal', 'สช.วิชาชีพ-ครู-นร.', ['จำนวนนักเรียน / ชาย', 'จำนวนนักเรียน / หญิง']],
 ];
 
-// เด็กเล็กที่ศูนย์พัฒนาเด็กเล็ก/สถานพัฒนาเด็กปฐมวัย (ฟอร์ม 14) — เฉพาะคอลัมน์ "เด็กเล็ก / อายุ 2-5
-// ปี / เพศ" (8 คอลัมน์) ไม่ใช้คอลัมน์ "รวมทั้งสิ้น" ตรง ๆ เพราะไม่แยกเพศ (ผลรวม 8 คอลัมน์นี้ = "รวม
-// ทั้งสิ้น" อยู่แล้ว) — ชุดเดียวกับที่ public_report_data.php ใช้ใน $genderSheets (ไม่ใช่ metric
-// "students" ที่ใช้ "รวมทั้งสิ้น" ตรง ๆ เพราะที่นั่นไม่ต้องแยกเพศ) เพิ่มเมื่อ 2026-08-30 หลังพบว่า
-// ตารางนี้ไม่เคยรวมข้อมูลฟอร์ม 14 มาก่อนเลย ทำให้ยอดรวมในตารางนี้ไม่ตรงกับยอดรวม "จำนวนผู้เรียน
-// ทั้งหมด" ของหน้าภาพรวม/ตารางสรุป (ผู้ใช้ทักท้วง) — ฟอร์ม 14 มี school_code ในตัวเองอยู่แล้ว
-// (ใช้ $stdIdentity เหมือนฟอร์ม 4) ไม่ต้องพึ่งการจับคู่ชื่อแบบฟอร์ม 16.2
-$childcareChildColumns = [
-    'เด็กเล็ก / อายุ 2 ปี / ชาย', 'เด็กเล็ก / อายุ 2 ปี / หญิง',
-    'เด็กเล็ก / อายุ 3 ปี / ชาย', 'เด็กเล็ก / อายุ 3 ปี / หญิง',
-    'เด็กเล็ก / อายุ 4 ปี / ชาย', 'เด็กเล็ก / อายุ 4 ปี / หญิง',
-    'เด็กเล็ก / อายุ 5 ปี / ชาย', 'เด็กเล็ก / อายุ 5 ปี / หญิง',
-];
+// เด็กเล็กที่ศูนย์พัฒนาเด็กเล็ก/สถานพัฒนาเด็กปฐมวัย (ฟอร์ม 14) — **แก้เมื่อ 2026-08-30 (คำขอถัดมา
+// ทันที)**: ตอนแรกใช้ผลรวมคอลัมน์ "เด็กเล็ก / อายุ 2-5 ปี / เพศ" (8 คอลัมน์) แทน "รวมทั้งสิ้น" เพราะ
+// อยากได้ตัวเลขแยกชาย/หญิง แต่ผู้ใช้แจ้งว่ายอดรวมตารางนี้ไม่ตรงกับหน้าภาพรวม/ตารางสรุปอีกแล้ว
+// (ต่างกัน 65 คน) — สาเหตุคือ **"รวมทั้งสิ้น" ที่หน่วยงานพิมพ์มาเอง ไม่เท่ากับผลรวมของ 8 คอลัมน์อายุ
+// เป๊ะเสมอไปในข้อมูลจริง** (พิมพ์ผิด/กรอกไม่ครบเป็นบางแถว) ขณะที่ metric "students" ใน
+// public_report_data.php ใช้ "รวมทั้งสิ้น" ตรง ๆ มาตั้งแต่แรก — ทำให้ 2 หน้านี้ "ไม่มีทางตรงกันได้
+// เป๊ะ" ถ้าใช้คนละคอลัมน์กัน ต่อให้โค้ดถูกทั้งคู่ก็ตาม — **แก้โดยเปลี่ยนมาใช้ "รวมทั้งสิ้น" คอลัมน์
+// เดียวกับ metric เป๊ะ ๆ** รับประกันว่ายอดรวมตรงกันเสมอโดยโครงสร้าง ไม่ต้องพึ่งสมมติฐานว่าข้อมูลกรอก
+// มาถูกต้อง — แลกกับการไม่มีแยกชาย/หญิงให้คอลัมน์นี้ (ไม่มีข้อมูลเพศที่เชื่อถือได้จริง ๆ ให้ใช้)
+$childcareChildColumns = ['รวมทั้งสิ้น'];
 
 // เด็กที่สถานรับเลี้ยงเด็กเอกชนสังกัด พมจ. (ฟอร์ม 16.2) — เฉพาะคอลัมน์ "จำนวนเด็ก..." เท่านั้น (ไม่รวม
 // "จำนวนผู้ดูแลเด็ก..." ในชีทเดียวกัน ซึ่งเป็นข้อมูลครู/ผู้ดูแล ไม่ใช่ผู้เรียน) — เพิ่มเมื่อ 2026-08-30
@@ -132,7 +129,7 @@ function grade_table_blank_row(string $schoolCode, string $schoolName, string $a
         'school_name' => $schoolName,
         'agency_name' => $agencyName,
         'amphoe'      => $amphoe,
-        'childcare_total' => ['male' => 0.0, 'female' => 0.0],
+        'childcare_total' => 0.0,
         'nfe_total'   => ['male' => 0.0, 'female' => 0.0],
         'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
         'pmj_total'   => ['male' => 0.0, 'female' => 0.0],
@@ -177,13 +174,8 @@ foreach ($pivot14['rows'] as $r) {
     }
     foreach ($childcareChildColumns as $path) {
         $v = $r[$path] ?? '';
-        if ($v === '' || !is_numeric($v)) {
-            continue;
-        }
-        if (preg_match('/ชาย$/u', $path)) {
-            $rowsByCode[$code]['childcare_total']['male'] += (float)$v;
-        } elseif (preg_match('/หญิง$/u', $path)) {
-            $rowsByCode[$code]['childcare_total']['female'] += (float)$v;
+        if ($v !== '' && is_numeric($v)) {
+            $rowsByCode[$code]['childcare_total'] += (float)$v;
         }
     }
 }
@@ -276,7 +268,7 @@ usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school
 // (ฟอร์ม 4/14/11/15/16) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณ
 // แทรกในแต่ละ pass ข้างบน
 foreach ($gradeTableRows as &$gtRow) {
-    $grandTotal = $gtRow['childcare_total']['male'] + $gtRow['childcare_total']['female']
+    $grandTotal = $gtRow['childcare_total']
         + $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female']
         + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female']
         + $gtRow['pmj_total']['male'] + $gtRow['pmj_total']['female'];
@@ -333,7 +325,7 @@ if ($searchName !== '' || $filterAgency || $filterAmphoe !== '') {
 // ของตาราง
 $gradeTotals = [
     'grades' => [],
-    'childcare_total' => ['male' => 0.0, 'female' => 0.0],
+    'childcare_total' => 0.0,
     'nfe_total' => ['male' => 0.0, 'female' => 0.0],
     'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
     'pmj_total' => ['male' => 0.0, 'female' => 0.0],
@@ -347,8 +339,7 @@ foreach ($gradeTableRows as $r) {
         $gradeTotals['grades'][$label]['male'] += $r['grades'][$label]['male'];
         $gradeTotals['grades'][$label]['female'] += $r['grades'][$label]['female'];
     }
-    $gradeTotals['childcare_total']['male'] += $r['childcare_total']['male'];
-    $gradeTotals['childcare_total']['female'] += $r['childcare_total']['female'];
+    $gradeTotals['childcare_total'] += $r['childcare_total'];
     $gradeTotals['nfe_total']['male'] += $r['nfe_total']['male'];
     $gradeTotals['nfe_total']['female'] += $r['nfe_total']['female'];
     $gradeTotals['private_nonformal_total']['male'] += $r['private_nonformal_total']['male'];
