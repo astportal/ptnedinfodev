@@ -82,6 +82,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                 <th>สังกัด/หน่วยงาน</th>
                 <th>อำเภอ</th>
                 <th class="num">รวม</th>
+                <th class="num">รวมชาย</th>
+                <th class="num">รวมหญิง</th>
                 <th class="num">ครูผู้สอน (ชาย)</th>
                 <th class="num">ครูผู้สอน (หญิง)</th>
                 <th class="num">ครู ศพด. (ชาย)</th>
@@ -96,6 +98,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
               <tr class="row-total">
                 <td colspan="4">รวม (ตามผลค้นหาปัจจุบัน)</td>
                 <td class="num"><?= fmt_num($gradeTotals['grand_total']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['grand_total_male']) ?></td>
+                <td class="num"><?= fmt_num($gradeTotals['grand_total_female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['teaching_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['teaching_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['male']) ?></td>
@@ -112,6 +116,8 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
                   <td><?= h($row['agency_name']) ?></td>
                   <td><?= h($row['amphoe']) ?></td>
                   <td class="num"><?= fmt_num($row['grand_total']) ?></td>
+                  <td class="num"><?= fmt_num($row['grand_total_male']) ?></td>
+                  <td class="num"><?= fmt_num($row['grand_total_female']) ?></td>
                   <td class="num"><?= fmt_num($row['teaching_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['teaching_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['childcare_total']['male']) ?></td>

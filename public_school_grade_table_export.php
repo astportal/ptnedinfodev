@@ -14,7 +14,7 @@ $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อความไทยถูกต้อง
 
 // ระดับชั้น, "เด็ก ศพด.", "ผู้เรียน สกร.", "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
-$header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม'];
+$header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม', 'รวมชาย', 'รวมหญิง'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
     $header[] = $label . ' (หญิง)';
@@ -30,7 +30,7 @@ $header[] = 'พมจ. (หญิง)';
 fputcsv($out, $header);
 
 foreach ($gradeTableRows as $row) {
-    $line = [$row['school_code'], $row['school_name'], $row['agency_name'], $row['amphoe'], $row['grand_total']];
+    $line = [$row['school_code'], $row['school_name'], $row['agency_name'], $row['amphoe'], $row['grand_total'], $row['grand_total_male'], $row['grand_total_female']];
     foreach ($gradeLabels as $label) {
         $line[] = $row['grades'][$label]['male'];
         $line[] = $row['grades'][$label]['female'];

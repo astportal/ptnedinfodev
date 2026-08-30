@@ -276,15 +276,21 @@ usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school
 // (ชาย+หญิง) + ผู้เรียนนอกระบบ (ชาย+หญิง) + พมจ. (ชาย+หญิง) คำนวณครั้งเดียวตรงนี้หลังข้อมูลทุกแหล่ง
 // (ฟอร์ม 4/14/11/15/16) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณ
 // แทรกในแต่ละ pass ข้างบน
+// "รวมชาย"/"รวมหญิง" — ผลรวมแยกเพศข้ามทุกแหล่งข้อมูล (เพิ่มเมื่อ 2026-08-30 ตามคำขอผู้ใช้งาน) ทุก
+// แหล่งในตารางนี้แยกชาย/หญิงอยู่แล้วทั้งหมด (grades, childcare_total, nfe_total,
+// private_nonformal_total, pmj_total) จึงรวมตรง ๆ ได้เลย ไม่ต้องกังวลเรื่องแหล่งไหนไม่มีข้อมูลเพศ
 foreach ($gradeTableRows as &$gtRow) {
-    $grandTotal = $gtRow['childcare_total']['male'] + $gtRow['childcare_total']['female']
-        + $gtRow['nfe_total']['male'] + $gtRow['nfe_total']['female']
-        + $gtRow['private_nonformal_total']['male'] + $gtRow['private_nonformal_total']['female']
-        + $gtRow['pmj_total']['male'] + $gtRow['pmj_total']['female'];
+    $grandMale = $gtRow['childcare_total']['male'] + $gtRow['nfe_total']['male']
+        + $gtRow['private_nonformal_total']['male'] + $gtRow['pmj_total']['male'];
+    $grandFemale = $gtRow['childcare_total']['female'] + $gtRow['nfe_total']['female']
+        + $gtRow['private_nonformal_total']['female'] + $gtRow['pmj_total']['female'];
     foreach ($gradeLabels as $label) {
-        $grandTotal += $gtRow['grades'][$label]['male'] + $gtRow['grades'][$label]['female'];
+        $grandMale += $gtRow['grades'][$label]['male'];
+        $grandFemale += $gtRow['grades'][$label]['female'];
     }
-    $gtRow['grand_total'] = $grandTotal;
+    $gtRow['grand_total_male'] = $grandMale;
+    $gtRow['grand_total_female'] = $grandFemale;
+    $gtRow['grand_total'] = $grandMale + $grandFemale;
 }
 unset($gtRow);
 
@@ -339,6 +345,8 @@ $gradeTotals = [
     'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
     'pmj_total' => ['male' => 0.0, 'female' => 0.0],
     'grand_total' => 0.0,
+    'grand_total_male' => 0.0,
+    'grand_total_female' => 0.0,
 ];
 foreach ($gradeLabels as $label) {
     $gradeTotals['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
@@ -357,6 +365,8 @@ foreach ($gradeTableRows as $r) {
     $gradeTotals['pmj_total']['male'] += $r['pmj_total']['male'];
     $gradeTotals['pmj_total']['female'] += $r['pmj_total']['female'];
     $gradeTotals['grand_total'] += $r['grand_total'];
+    $gradeTotals['grand_total_male'] += $r['grand_total_male'];
+    $gradeTotals['grand_total_female'] += $r['grand_total_female'];
 }
 
 // ก็อปมาจาก fmt_num() ใน public_report_data.php ตรง ๆ (ไม่ include ไฟล์นั้นเพราะตัวแปรชื่อชนกันตามที่
