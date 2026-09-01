@@ -8,9 +8,9 @@
   --border: #e5e7eb;
   --ok: #16a34a;
   --err: #dc2626;
-  --topbar-h: 58px; /* ค่าประมาณ (topbar ไม่ได้ fix สูงตายตัว ยืดได้ถ้า nav ตกบรรทัดบนจอแคบมาก) ใช้
-                        อ้างอิงจุดเริ่ม sticky ของหัวตารางที่ scroll ตามหน้าเว็บ (ดู th ด้านล่าง) กัน
-                        ซ้อนทับกับ topbar ที่ sticky อยู่แล้ว */
+  --topbar-h: 58px; /* ความสูงขั้นต่ำของ topbar (ค่าประมาณ ไม่ fix ตายตัว ยืดได้ถ้า nav ตกบรรทัดบนจอ
+                        แคบมาก) — ไม่ได้ใช้อ้างอิง sticky offset ของหัวตารางอีกต่อไป (ลองแล้วใช้ไม่ได้
+                        กับ .table-scroll ดู comment ที่ th ด้านล่าง) */
 }
 * { box-sizing: border-box; }
 body {
@@ -63,20 +63,20 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .muted { color: var(--muted); font-size: 14px; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; white-space: nowrap; }
-/* top: var(--topbar-h) (ไม่ใช่ 0) กัน sticky header ของตารางไปซ้อนทับใต้ topbar ที่ sticky อยู่แล้ว
-   ด้านบน — ใช้กับตารางที่พึ่ง scroll ของหน้าเว็บเอง (.table-scroll มีแค่ overflow-x) เท่านั้น ตารางที่
-   scroll ในกรอบตัวเอง (.report-table-scroll มี overflow ทั้ง 2 แกน) ไม่กระทบเพราะสร้าง sticky context
-   ใหม่ในตัวเองอยู่แล้ว (ดู public_report.css) */
-th { background: #f9fafb; position: sticky; top: var(--topbar-h); }
-/* overflow-y: visible ต้องระบุตรง ๆ (ไม่ใช่ปล่อย default) — ไม่งั้นสเปก CSS จะ auto-compute
-   overflow-y เป็น "auto" เองทันทีที่ overflow-x ไม่ใช่ visible (ตั้งใจให้ scroll แค่แนวนอนเดียว
-   ตามชื่อคลาส) ผลคือ .table-scroll กลายเป็น sticky positioning container ของตัวเองไปเงียบ ๆ (ทั้งที่
-   ไม่มี max-height ให้ scroll แนวตั้งจริง) แก้เมื่อ 2026-09-01 — ตอนหัวตาราง th ด้านล่างยัง sticky
-   top:0 บั๊กนี้ไม่มีผลอะไรให้เห็น (0 ไม่ต้องเลื่อนก็ยังอยู่ตำแหน่งเดิม) พอเปลี่ยนเป็น
-   top:var(--topbar-h) ที่ไม่ใช่ 0 บั๊กที่ซ่อนอยู่เดิมเลยโผล่ออกมาให้เห็นเป็นหัวตารางเลื่อนหล่นลงมา
-   ทับแถวข้อมูลแถวแรกทันทีที่โหลดหน้า (ไม่ต้อง scroll เลย) เพราะ .table-scroll เอง (ไม่ใช่หน้าเว็บ)
-   ถูกเข้าใจผิดว่าเป็น scroll container แล้วดันหัวตารางลงมา 58px จากขอบบนของกล่องตัวเอง */
-.table-scroll { overflow-x: auto; overflow-y: visible; border: 1px solid var(--border); border-radius: 8px; }
+/* ไม่ใช้ position: sticky กับ th เปล่า ๆ ตัวนี้อีกต่อไป (ลองมาแล้ว 2 รอบตอนแก้ไม่ให้ทับ topbar
+   ที่ sticky ใหม่ — แก้เมื่อ 2026-09-01) เพราะ .table-scroll ที่ตารางส่วนใหญ่ในระบบห่ออยู่ (แดชบอร์ด,
+   หน้าแอดมินต่าง ๆ) ตั้ง overflow-x: auto ไว้ให้ scroll แนวนอนได้ — สเปก CSS บังคับว่าองค์ประกอบที่มี
+   overflow แกนไหนแกนหนึ่งไม่ใช่ visible จะกลายเป็น "scroll container" ของตัวเองไปเลยทั้งกล่อง (ทั้ง 2
+   แกน ไม่แยกทีละแกน) แม้จะระบุ overflow-y: visible ตรง ๆ ก็ตาม (ลองแล้วไม่ได้ผล สเปกบังคับ compute
+   ทับอยู่ดี) เท่ากับว่า sticky th ที่อยู่ข้างในจะยึดตำแหน่งกับกล่อง .table-scroll เอง ไม่ใช่หน้าเว็บ
+   ทั้งหน้า — ปัญหาคือกล่องนี้ไม่มี max-height ให้ scroll แนวตั้งจริง (สูงเท่าเนื้อหาเสมอ) top ที่ไม่ใช่
+   0 เลยดันหัวตารางลงมาทับแถวข้อมูลแถวแรกทันทีที่โหลดหน้า ไม่ต้อง scroll เลย (top:0 เดิมบังเอิญไม่โชว์
+   ปัญหานี้เพราะไม่ต้องดันไปไหน) **สรุปคือหัวตาราง .table-scroll ไม่เคย sticky ตามหน้าเว็บได้จริงตั้งแต่
+   แรกอยู่แล้ว** เอา position:sticky ออกจึงไม่กระทบพฤติกรรมที่ผู้ใช้เคยเห็นจริง ๆ เลย — ตารางที่ต้องการ
+   หัวตาราง sticky แบบเห็นผลจริงให้ใช้ .report-table-scroll แทน (มี max-height+overflow ทั้ง 2 แกนจริง
+   ดู .stats-table.two-row-header ใน public_report.css เป็นตัวอย่าง) */
+th { background: #f9fafb; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
 .btn {
   display: inline-block;
   background: var(--primary);
