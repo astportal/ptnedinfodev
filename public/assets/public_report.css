@@ -70,6 +70,26 @@
 .swatch.male { background: var(--series-1); }
 .swatch.female { background: var(--series-2); }
 
+/* หัวข้อคั่น section ใหญ่ในหน้ากราฟ (public_report.php) — แยก "ข้อมูลผู้เรียน" กับ "ข้อมูลครู" ให้เห็น
+   ชัดว่าเป็นคนละกลุ่ม ไม่ปนกัน (เพิ่มเมื่อ 2026-09-01 ตามคำขอผู้ใช้งาน — เดิมการ์ดทุกใบหน้าตาเหมือนกัน
+   หมด ไล่กราฟผู้เรียนกับครูต่อกันเรื่อย ๆ ไม่มีจุดแบ่งให้สังเกต) accent สีต่างกันต่อ section เป็น cue
+   ทางสายตาเสริมจากตัวข้อความ ไม่ได้ใช้สีเป็นตัวบ่งชี้เพียงอย่างเดียว */
+.section-divider {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 32px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--section-accent, var(--primary));
+}
+.section-divider h2 { margin: 0; font-size: 20px; color: var(--section-accent, var(--primary)); }
+.section-divider .section-sub { font-size: 13px; color: var(--ink-muted, #898781); }
+.section-divider.students { --section-accent: #2563eb; }
+.section-divider.teachers { --section-accent: #b45309; }
+.section-nav { display: flex; gap: 16px; margin: 4px 0 0; font-size: 14px; }
+.section-nav a { color: var(--primary); text-decoration: none; }
+.section-nav a:hover { text-decoration: underline; }
+
 .bar-chart { display: flex; flex-direction: column; gap: 7px; }
 .bar-row { display: flex; align-items: center; gap: 10px; }
 .bar-label { width: 240px; flex-shrink: 0; font-size: 13px; color: var(--ink-secondary); text-align: right; overflow-wrap: break-word; }

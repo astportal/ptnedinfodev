@@ -380,6 +380,16 @@ arsort($dropoutRateByAmphoe);
 $dropoutRateTop5 = array_slice($dropoutRateByAmphoe, 0, 5, true);
 $dropoutRateBottom5 = array_slice(array_reverse($dropoutRateByAmphoe, true), 0, 5, true);
 
+// จำนวนครูแยกตามอันดับ/วิทยฐานะ (10.3), ตำแหน่งทางวิชาการสายอาจารย์ อว. (10.4), วุฒิการศึกษาสูงสุด
+// (10.5) — ต่างจากกราฟอื่นในไฟล์นี้ที่มีแค่ยอดรวมต่อหมวด 3 ชุดนี้ต้องมีตารางแยกชาย/หญิงด้วยตามคำขอ
+// ผู้ใช้งาน (เพิ่มเมื่อ 2026-09-01) จึงใช้ sumByColumnPathPartsWithGender แทน sumByColumnPathParts —
+// ตรวจโครงสร้างคอลัมน์จริงจาก reference_templates/10_ข้อมูลครูV2.xlsx แล้ว ทั้ง 3 ชีทมีแค่ 2 ระดับ
+// หัวตาราง "<หมวด> / เพศ" ล้วน (ไม่มีคอลัมน์ "รวม" ปนอยู่) จึง dropFirst=0 ได้เลยทั้ง 3 ชีท — แสดงใน
+// ส่วน "ข้อมูลครู" ท้ายหน้ากราฟ แยกจากกราฟผู้เรียนด้านบนทั้งหมด (ดู public_report.php)
+$teacherByRank = sort_gender_breakdown_desc($reporting->sumByColumnPathPartsWithGender('10_teachers', '10.3ครู-แยกตำแหน่ง', 0, $selectedYear));
+$teacherByAcademicRank = sort_gender_breakdown_desc($reporting->sumByColumnPathPartsWithGender('10_teachers', '10.4อว-แยกตำแหน่ง', 0, $selectedYear));
+$teacherByEducation = sort_gender_breakdown_desc($reporting->sumByColumnPathPartsWithGender('10_teachers', '10.5ครู-แยกวุฒิการศึกษา', 0, $selectedYear));
+
 // แนวโน้มจำนวนนักเรียนรายปีการศึกษา — ยอดรวมทั้งจังหวัดของทุกปีที่มีข้อมูล เรียงปีน้อยไปมาก (จะมี
 // แค่ 1-2 แท่งถ้าระบบเพิ่งเริ่มเก็บข้อมูลไม่กี่ปี ก็ยังแสดงผลได้ปกติ ไม่พัง รอข้อมูลปีต่อ ๆ ไปสะสม)
 $studentsByYear = [];
@@ -422,6 +432,50 @@ function render_bar_chart(array $data, callable $formatValue): void
 }
 $fmtPeople = static fn($v) => fmt_num($v) . ' คน';
 $fmtPercent = static fn($v) => number_format((float)$v, 1) . '%';
+
+// เรียงผลลัพธ์ของ Reporting::sumByColumnPathPartsWithGender() (หมวด => ['male'=>.., 'female'=>..])
+// จากยอดรวม (ชาย+หญิง) มากไปน้อย — ใช้ทั้งกับตารางและกราฟแท่งของ 10.3/10.4/10.5 ให้เรียงลำดับตรงกัน
+function sort_gender_breakdown_desc(array $data): array
+{
+    uasort($data, fn($a, $b) => ($b['male'] + $b['female']) <=> ($a['male'] + $a['female']));
+    return $data;
+}
+
+// แปลงผลลัพธ์ sort_gender_breakdown_desc() ให้เหลือแค่ยอดรวมต่อหมวด (หมวด => ตัวเลข) สำหรับส่งเข้า
+// render_bar_chart() ตรง ๆ — คงลำดับเดิม (เรียงมากไปน้อยแล้ว) ไม่ arsort() ซ้ำ
+function totals_from_gender_breakdown(array $data): array
+{
+    $out = [];
+    foreach ($data as $category => $g) {
+        $out[$category] = $g['male'] + $g['female'];
+    }
+    return $out;
+}
+
+// เรนเดอร์ตาราง (หมวด/ชาย/หญิง/รวม) + กราฟแท่งยอดรวมต่อหมวดต่อท้าย — ใช้ร่วมกันทั้ง 3 การ์ด 10.3/10.4/
+// 10.5 ในหน้ากราฟ ต่างกันแค่ข้อมูล/ชื่อคอลัมน์หมวดแรก ตารางอยู่ก่อนกราฟเสมอ (ดูตัวเลขแยกเพศแม่นยำได้
+// จากตาราง ส่วนกราฟช่วยเทียบสัดส่วนระหว่างหมวดได้ไวโดยไม่ต้องไล่อ่านตัวเลข)
+function render_gender_breakdown_table_and_chart(array $data, string $categoryLabel, callable $formatValue): void
+{
+    if (!$data) {
+        echo '<p class="muted">ยังไม่มีข้อมูล</p>';
+        return;
+    }
+    $totalMale = 0.0;
+    $totalFemale = 0.0;
+    echo '<div class="report-table-scroll"><table class="stats-table">';
+    echo '<thead><tr><th>' . h($categoryLabel) . '</th><th class="num">ชาย</th><th class="num">หญิง</th><th class="num">รวม</th></tr></thead><tbody>';
+    foreach ($data as $category => $g) {
+        $totalMale += $g['male'];
+        $totalFemale += $g['female'];
+        echo '<tr><td>' . h($category) . '</td><td class="num">' . fmt_num($g['male']) . '</td><td class="num">' . fmt_num($g['female']) . '</td><td class="num">' . fmt_num($g['male'] + $g['female']) . '</td></tr>';
+    }
+    echo '<tr class="row-total"><td>รวม</td><td class="num">' . fmt_num($totalMale) . '</td><td class="num">' . fmt_num($totalFemale) . '</td><td class="num">' . fmt_num($totalMale + $totalFemale) . '</td></tr>';
+    echo '</tbody></table></div>';
+    echo '<div style="margin-top:16px;">';
+    render_bar_chart(totals_from_gender_breakdown($data), $formatValue);
+    echo '</div>';
+}
 
 /**
  * ส่วนหัว + topbar + เมนูด้านซ้าย + การ์ดแนะนำ/ตัวกรอง ที่ใช้ร่วมกันทั้ง 2 หน้า — เปิด

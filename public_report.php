@@ -8,6 +8,8 @@ require_once __DIR__ . '/public_report_data.php';
 
 render_report_start('charts');
 ?>
+      <p class="section-nav"><a href="#section-students">↓ ข้อมูลผู้เรียน</a><a href="#section-teachers">↓ ข้อมูลครู</a></p>
+
       <div class="card viz-root">
         <div class="kpi-row">
           <div class="kpi-col">
@@ -79,6 +81,11 @@ render_report_start('charts');
         </div>
       </div>
 
+      <div class="section-divider students" id="section-students">
+        <h2>ข้อมูลผู้เรียน</h2>
+        <span class="section-sub">จำนวน/สัดส่วนนักเรียนและผู้เรียนทุกกลุ่ม แยกตามมิติต่าง ๆ</span>
+      </div>
+
       <div class="card viz-root">
         <h2>จำนวนนักเรียน/ผู้เรียน รายปีการศึกษา</h2>
         <?php render_bar_chart($studentsByYear, $fmtPeople); ?>
@@ -134,6 +141,29 @@ render_report_start('charts');
             <?php render_bar_chart($graduateStatusM6, $fmtPeople); ?>
           </div>
         </div>
+      </div>
+
+      <div class="section-divider teachers" id="section-teachers">
+        <h2>ข้อมูลครู</h2>
+        <span class="section-sub">จำนวนครู/ผู้สอน แยกตามอันดับ-วิทยฐานะ, ตำแหน่งทางวิชาการ, วุฒิการศึกษา — แยกจากข้อมูลผู้เรียนด้านบนทั้งหมด</span>
+      </div>
+
+      <div class="card viz-root">
+        <h2>จำนวนครูแยกตามอันดับ/วิทยฐานะ (ตารางที่ 10.3)</h2>
+        <p class="muted">เฉพาะครู (ไม่รวมผู้บริหาร/บุคลากรสนับสนุน) — แยกตามอันดับ/วิทยฐานะที่ได้รับ</p>
+        <?php render_gender_breakdown_table_and_chart($teacherByRank, 'อันดับ/วิทยฐานะ', $fmtPeople); ?>
+      </div>
+
+      <div class="card viz-root">
+        <h2>จำนวนผู้สอนสาย อว. แยกตามตำแหน่งทางวิชาการ (ตารางที่ 10.4)</h2>
+        <p class="muted">เฉพาะสถานศึกษาสังกัดกระทรวงการอุดมศึกษาฯ (อว.) — แยกตามตำแหน่งทางวิชาการ</p>
+        <?php render_gender_breakdown_table_and_chart($teacherByAcademicRank, 'ตำแหน่งทางวิชาการ', $fmtPeople); ?>
+      </div>
+
+      <div class="card viz-root">
+        <h2>จำนวนครูแยกตามวุฒิการศึกษาสูงสุด (ตารางที่ 10.5)</h2>
+        <p class="muted">เฉพาะครู (ไม่รวมผู้บริหาร/บุคลากรสนับสนุน) — แยกตามวุฒิการศึกษาสูงสุดที่สำเร็จ</p>
+        <?php render_gender_breakdown_table_and_chart($teacherByEducation, 'วุฒิการศึกษา', $fmtPeople); ?>
       </div>
 <?php
 render_report_end();

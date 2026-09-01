@@ -207,6 +207,49 @@ class Reporting
     }
 
     /**
+     * Same shape of input as sumByColumnPathParts() ("category / ... / gender" column_paths,
+     * $dropFirst levels dropped from the front) but keeps the last level as ชาย/หญิง instead of
+     * dropping it, splitting each category's sum into male/female instead of combining them —
+     * for a table that needs to show the gender breakdown per category (not just the bar-chart
+     * total), e.g. form 10.3/10.4/10.5's ครู/ผู้สอน counts by อันดับ-วิทยฐานะ, ตำแหน่งทางวิชาการ,
+     * วุฒิการศึกษา. A column whose last level isn't ชาย/หญิง (e.g. a sheet-level "รวม" column with
+     * no gender split) is skipped, same as sumByColumnPathParts() skips a column with nothing left
+     * after dropping.
+     *
+     * @return array<string,array{male:float,female:float}> category => gender totals
+     */
+    public function sumByColumnPathPartsWithGender(string $formKey, string $sheetName, int $dropFirst, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $totals = [];
+        foreach ($pivot['columns'] as $path) {
+            $parts = array_map('trim', explode(' / ', $path));
+            $len = count($parts) - $dropFirst - 1;
+            if ($len <= 0) {
+                continue;
+            }
+            $gender = $parts[count($parts) - 1];
+            $genderKey = $gender === 'ชาย' ? 'male' : ($gender === 'หญิง' ? 'female' : null);
+            if ($genderKey === null) {
+                continue;
+            }
+            $category = implode(' / ', array_slice($parts, $dropFirst, $len));
+            $sum = 0.0;
+            foreach ($pivot['rows'] as $row) {
+                $v = $row[$path] ?? '';
+                if ($v !== '' && is_numeric($v)) {
+                    $sum += (float)$v;
+                }
+            }
+            if (!isset($totals[$category])) {
+                $totals[$category] = ['male' => 0.0, 'female' => 0.0];
+            }
+            $totals[$category][$genderKey] += $sum;
+        }
+        return $totals;
+    }
+
+    /**
      * Count submission rows (not summed values) of one sheet's pivot(), grouped by dimension —
      * for sheets where "1 row = 1 unit" is itself the count (e.g. form 2's "ข้อมูลสถานศึกษา",
      * 1 row per school).
