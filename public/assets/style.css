@@ -68,7 +68,15 @@ th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; w
    scroll ในกรอบตัวเอง (.report-table-scroll มี overflow ทั้ง 2 แกน) ไม่กระทบเพราะสร้าง sticky context
    ใหม่ในตัวเองอยู่แล้ว (ดู public_report.css) */
 th { background: #f9fafb; position: sticky; top: var(--topbar-h); }
-.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+/* overflow-y: visible ต้องระบุตรง ๆ (ไม่ใช่ปล่อย default) — ไม่งั้นสเปก CSS จะ auto-compute
+   overflow-y เป็น "auto" เองทันทีที่ overflow-x ไม่ใช่ visible (ตั้งใจให้ scroll แค่แนวนอนเดียว
+   ตามชื่อคลาส) ผลคือ .table-scroll กลายเป็น sticky positioning container ของตัวเองไปเงียบ ๆ (ทั้งที่
+   ไม่มี max-height ให้ scroll แนวตั้งจริง) แก้เมื่อ 2026-09-01 — ตอนหัวตาราง th ด้านล่างยัง sticky
+   top:0 บั๊กนี้ไม่มีผลอะไรให้เห็น (0 ไม่ต้องเลื่อนก็ยังอยู่ตำแหน่งเดิม) พอเปลี่ยนเป็น
+   top:var(--topbar-h) ที่ไม่ใช่ 0 บั๊กที่ซ่อนอยู่เดิมเลยโผล่ออกมาให้เห็นเป็นหัวตารางเลื่อนหล่นลงมา
+   ทับแถวข้อมูลแถวแรกทันทีที่โหลดหน้า (ไม่ต้อง scroll เลย) เพราะ .table-scroll เอง (ไม่ใช่หน้าเว็บ)
+   ถูกเข้าใจผิดว่าเป็น scroll container แล้วดันหัวตารางลงมา 58px จากขอบบนของกล่องตัวเอง */
+.table-scroll { overflow-x: auto; overflow-y: visible; border: 1px solid var(--border); border-radius: 8px; }
 .btn {
   display: inline-block;
   background: var(--primary);
