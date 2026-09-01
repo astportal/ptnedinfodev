@@ -87,6 +87,22 @@ foreach ($populationRows as $p) {
 }
 ksort($rows, SORT_STRING | SORT_FLAG_CASE);
 
+// แถวรวมทั้งจังหวัด — บวกยอดประชากร/ผู้เรียนของทุกอำเภอก่อน แล้วค่อยหารเป็นอัตราทีเดียว (ไม่ใช่เฉลี่ย
+// อัตราของแต่ละอำเภอ) กันอำเภอเล็ก ๆ ถ่วงอัตราภาพรวมผิดสัดส่วนเทียบกับอำเภอใหญ่
+$provinceTotals = [];
+foreach ($ageBandLabels as $key => $label) {
+    $popSum = 0;
+    $enrolledSum = in_array($key, $enrollableAgeBands, true) ? 0.0 : null;
+    foreach ($rows as $bands) {
+        $popSum += $bands[$key]['population'];
+        if ($enrolledSum !== null) {
+            $enrolledSum += $bands[$key]['enrolled'] ?? 0;
+        }
+    }
+    $rate = ($enrolledSum !== null && $popSum > 0) ? ($enrolledSum / $popSum * 100) : null;
+    $provinceTotals[$key] = ['population' => $popSum, 'enrolled' => $enrolledSum, 'rate' => $rate];
+}
+
 $fmtRate = static fn($v) => $v === null ? '—' : number_format((float)$v, 1) . '%';
 
 render_report_start('population');
@@ -141,6 +157,18 @@ render_report_start('population');
                   </tr>
                 <?php endforeach; ?>
               </tbody>
+              <tfoot>
+                <tr class="row-total">
+                  <td>รวมทั้งจังหวัด</td>
+                  <?php foreach ($ageBandLabels as $key => $label): ?>
+                    <td class="num"><?= h(fmt_num($provinceTotals[$key]['population'])) ?></td>
+                    <?php if (in_array($key, $enrollableAgeBands, true)): ?>
+                      <td class="num"><?= h(fmt_num($provinceTotals[$key]['enrolled'])) ?></td>
+                      <td class="num"><?= h($fmtRate($provinceTotals[$key]['rate'])) ?></td>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
