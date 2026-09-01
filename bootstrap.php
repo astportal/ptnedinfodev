@@ -14,6 +14,7 @@ require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/XlsxReader.php';
 require_once __DIR__ . '/src/Importer.php';
 require_once __DIR__ . '/src/Reporting.php';
+require_once __DIR__ . '/src/PopulationImporter.php';
 
 function form_registry(): array
 {

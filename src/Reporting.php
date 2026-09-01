@@ -250,6 +250,44 @@ class Reporting
     }
 
     /**
+     * Same category-extraction rule as sumByColumnPathParts() (drop $dropFirst/$dropLast header
+     * levels, join what's left as the category key) but cross-tabulated by an identity dimension
+     * (agency_name/department/amphoe) instead of summed into one grand total per category — for
+     * comparing a per-category breakdown (e.g. form 4's grade levels) against a same-shaped
+     * per-อำเภอ reference dataset (e.g. population_by_age) without hardcoding the sheet's exact
+     * column_path text anywhere (header text/levels vary by template version — see ai_note.md
+     * "จุดที่พลาดมาก่อน" — matching by category *label* pattern after the fact is safer than
+     * reconstructing an exact path string by hand).
+     *
+     * @return array<string,array<string,float>> dimension value => (category => sum)
+     */
+    public function sumByColumnPathPartsByDimension(string $formKey, string $sheetName, int $dropFirst, int $dropLast, string $dimension, ?int $academicYear = null): array
+    {
+        $pivot = $this->pivot($formKey, $sheetName, $academicYear);
+        $totals = [];
+        foreach ($pivot['columns'] as $path) {
+            $parts = array_map('trim', explode(' / ', $path));
+            $len = count($parts) - $dropFirst - $dropLast;
+            if ($len <= 0) {
+                continue;
+            }
+            $category = implode(' / ', array_slice($parts, $dropFirst, $len));
+            foreach ($pivot['rows'] as $row) {
+                $v = $row[$path] ?? '';
+                if ($v === '' || !is_numeric($v)) {
+                    continue;
+                }
+                $group = trim((string)($row[$dimension] ?? ''));
+                if ($group === '') {
+                    $group = 'ไม่ระบุ';
+                }
+                $totals[$group][$category] = ($totals[$group][$category] ?? 0.0) + (float)$v;
+            }
+        }
+        return $totals;
+    }
+
+    /**
      * Count submission rows (not summed values) of one sheet's pivot(), grouped by dimension —
      * for sheets where "1 row = 1 unit" is itself the count (e.g. form 2's "ข้อมูลสถานศึกษา",
      * 1 row per school).

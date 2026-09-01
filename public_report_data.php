@@ -502,6 +502,7 @@ function render_report_start(string $activePage): void
     <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
     <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'grades' ? 'active' : '' ?>">ผู้เรียนรายชั้น</a>
     <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'teacher_grades' ? 'active' : '' ?>">ครูผู้สอน</a>
+    <a href="public_population.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'population' ? 'active' : '' ?>">ประชากรวัยเรียน</a>
     <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
     <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
