@@ -145,7 +145,7 @@ render_report_start('charts');
 
       <div class="section-divider teachers" id="section-teachers">
         <h2>ข้อมูลครู</h2>
-        <span class="section-sub">จำนวนครู/ผู้สอน แยกตามอันดับ-วิทยฐานะ, ตำแหน่งทางวิชาการ, วุฒิการศึกษา — แยกจากข้อมูลผู้เรียนด้านบนทั้งหมด</span>
+        <span class="section-sub">จำนวนครู/ผู้สอน แยกตามอันดับ-วิทยฐานะ, ตำแหน่งทางวิชาการ, วุฒิการศึกษา</span>
       </div>
 
       <div class="card viz-root">
