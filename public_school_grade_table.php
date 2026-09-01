@@ -87,7 +87,9 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
                 <?php endforeach; ?>
                 <th class="num" colspan="2" style="text-align:center;">เด็ก ศพด.</th>
-                <th class="num" colspan="2" style="text-align:center;">ผู้เรียน สกร.</th>
+                <?php foreach ($nfeActivityLabelsShown as $label): ?>
+                  <th class="num" colspan="2" style="text-align:center;"><?= h($label) ?></th>
+                <?php endforeach; ?>
                 <th class="num" colspan="2" style="text-align:center;">ผู้เรียนนอกระบบ</th>
                 <th class="num" colspan="2" style="text-align:center;">พมจ.</th>
               </tr>
@@ -98,8 +100,10 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                 <?php endforeach; ?>
                 <th class="num">ชาย</th>
                 <th class="num">หญิง</th>
-                <th class="num">ชาย</th>
-                <th class="num">หญิง</th>
+                <?php foreach ($nfeActivityLabelsShown as $label): ?>
+                  <th class="num">ชาย</th>
+                  <th class="num">หญิง</th>
+                <?php endforeach; ?>
                 <th class="num">ชาย</th>
                 <th class="num">หญิง</th>
                 <th class="num">ชาย</th>
@@ -118,8 +122,10 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                 <?php endforeach; ?>
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['childcare_total']['female']) ?></td>
-                <td class="num"><?= fmt_num($gradeTotals['nfe_total']['male']) ?></td>
-                <td class="num"><?= fmt_num($gradeTotals['nfe_total']['female']) ?></td>
+                <?php foreach ($nfeActivityLabelsShown as $label): ?>
+                  <td class="num"><?= fmt_num($gradeTotals['nfe_by_activity'][$label]['male']) ?></td>
+                  <td class="num"><?= fmt_num($gradeTotals['nfe_by_activity'][$label]['female']) ?></td>
+                <?php endforeach; ?>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['male']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['private_nonformal_total']['female']) ?></td>
                 <td class="num"><?= fmt_num($gradeTotals['pmj_total']['male']) ?></td>
@@ -140,8 +146,10 @@ require_once __DIR__ . '/public_school_grade_table_data.php';
                   <?php endforeach; ?>
                   <td class="num"><?= fmt_num($row['childcare_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['childcare_total']['female']) ?></td>
-                  <td class="num"><?= fmt_num($row['nfe_total']['male']) ?></td>
-                  <td class="num"><?= fmt_num($row['nfe_total']['female']) ?></td>
+                  <?php foreach ($nfeActivityLabelsShown as $label): ?>
+                    <td class="num"><?= fmt_num($row['nfe_by_activity'][$label]['male']) ?></td>
+                    <td class="num"><?= fmt_num($row['nfe_by_activity'][$label]['female']) ?></td>
+                  <?php endforeach; ?>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']['male']) ?></td>
                   <td class="num"><?= fmt_num($row['private_nonformal_total']['female']) ?></td>
                   <td class="num"><?= fmt_num($row['pmj_total']['male']) ?></td>

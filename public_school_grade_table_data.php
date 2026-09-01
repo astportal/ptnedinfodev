@@ -8,8 +8,10 @@
  * แหล่งข้อมูลคอลัมน์ระดับชั้นหลัก = ฟอร์ม 4 (`4_students` / ชีท "4.จำนวนผู้เรียน") เท่านั้น เพราะเป็น
  * ฟอร์มเดียวที่เก็บจำนวนผู้เรียนแยกตามระดับชั้นละเอียดแบบนี้ (อ.เตรียม..ป.เอก 37 ระดับ) ฟอร์มอื่น
  * (14, 11, 15, 16.2) ไม่ได้แยกระดับชั้นละเอียดขนาดนี้ จึงรวมเป็นยอดเดียวคนละคอลัมน์ท้ายตารางแทน:
- * "เด็ก ศพด." จากฟอร์ม 14, "ผู้เรียน สกร." จากฟอร์ม 11 (11.1), "ผู้เรียนนอกระบบ" จากฟอร์ม 15
- * (15.1-15.3, สช.วิชาชีพ-ครู-นร.) และ "พมจ." จากฟอร์ม 16.2 — ทั้ง 4 อย่างนี้เป็นสถานศึกษาคนละกลุ่มกับ
+ * "เด็ก ศพด." จากฟอร์ม 14, "ผู้เรียนนอกระบบ" จากฟอร์ม 15 (15.1-15.3, สช.วิชาชีพ-ครู-นร.) และ "พมจ."
+ * จากฟอร์ม 16.2 — ยกเว้นฟอร์ม 11 (11.1) ที่แยกเป็นคอลัมน์ตามกิจกรรมการศึกษาแทน (คอลัมน์ "สกร.-..." —
+ * ดู $nfeActivityGroups ด้านล่าง เปลี่ยนจากยอดเดียวเป็นแบบนี้เมื่อ 2026-09-01 ตามคำขอผู้ใช้งาน) — ทั้ง
+ * 4 กลุ่มนี้ (ศพด./กศน./เอกชนนอกระบบ/พมจ.) เป็นสถานศึกษาคนละกลุ่มกับ
  * ฟอร์ม 4 เลย (ศพด./กศน./เอกชนนอกระบบ/สถานรับเลี้ยงเด็ก ไม่กรอกฟอร์ม 4) จึงต้องรวม "แถว" (union
  * school_code) จากทุกแหล่งเข้าด้วยกัน ไม่ใช่แค่รวม "คอลัมน์" — **สำคัญ**: ก่อนแก้เมื่อ 2026-08-30
  * ตารางนี้เคยขาดฟอร์ม 14 ไปเลย ทำให้ผลรวมในตารางนี้ไม่ตรงกับยอดรวม "จำนวนผู้เรียนทั้งหมด" ของหน้า
@@ -87,6 +89,36 @@ $gradeGroups = [
 ];
 $gradeLabels = array_keys($gradeGroups);
 
+// "ผู้เรียน สกร." (ฟอร์ม 11.1) แยกเป็นคอลัมน์ตามกิจกรรมการศึกษาแทนยอดรวมเดียว (เพิ่มเมื่อ 2026-09-01
+// ตามคำขอผู้ใช้งาน — เดิมรวมทุกกิจกรรมเป็นยอดเดียวคอลัมน์เดียว) column_path คัดลอกมาจากการตรวจ
+// reference_templates/11_ข้อมูลการศึกษา_กศน.xlsx (ชีท 11.1) ตรง ๆ ด้วย unzip+node อ่าน worksheet
+// XML ดิบ (เครื่องนี้ไม่มี PHP) ปลอดภัยที่จะ hardcode แบบนี้เพราะฟอร์ม 11 ไม่มี
+// merge_extra_columns_into (ดู forms/registry.php) เหมือน $gradeGroups ข้างบน — label นำหน้าด้วย
+// "สกร." (การศึกษานอกระบบและการศึกษาตามอัธยาศัย) ตามคำขอผู้ใช้งาน กันสับสนกับคอลัมน์ระดับชั้นของ
+// ฟอร์ม 4 ที่ชื่อคล้ายกัน (เช่น "ประถม") — **หมายเหตุ**: คอลัมน์ลำดับที่ 10 ต้นฉบับสะกดขาดคำว่า
+// "กระ" (เหลือ "การบวนการเรียนรู้ตามแนว..." แทนที่จะเป็น "กระบวนการ...") เข้าใจว่าเป็นการพิมพ์ผิดใน
+// แม่แบบเอง แก้คำสะกดเฉพาะ label ที่แสดงผลให้ถูกต้อง แต่ column_path ที่ใช้ค้นหาข้อมูลจริงยังคง
+// สะกดตามต้นฉบับเป๊ะ (ต้องตรงกับข้อมูลที่ import เข้า DB จริง)
+$nfeActivityGroups = [
+    'สกร.-การส่งเสริมการรู้หนังสือ' => ['การส่งเสริม / การรู้หนังสือ / ชาย', 'การส่งเสริม / การรู้หนังสือ / หญิง'],
+    'สกร.-ประถม' => ['ประถมศึกษา / ชาย', 'ประถมศึกษา / หญิง'],
+    'สกร.-ม.ต้น' => ['มัธยมศึกษา / ตอนต้น / ชาย', 'มัธยมศึกษา / ตอนต้น / หญิง'],
+    'สกร.-ม.ปลาย' => ['มัธยมศึกษา / ตอนปลาย / ชาย', 'มัธยมศึกษา / ตอนปลาย / หญิง'],
+    'สกร.-ปวช.' => ['ปวช. / ชาย', 'ปวช. / หญิง'],
+    'สกร.-การศึกษาเพื่อพัฒนาอาชีพ' => ['การศึกษา / เพื่อพัฒนาอาชีพ / ชาย', 'การศึกษา / เพื่อพัฒนาอาชีพ / หญิง'],
+    'สกร.-การศึกษาเพื่อพัฒนาทักษะชีวิต' => ['การศึกษา / เพื่อพัฒนาทักษะชีวิต / ชาย', 'การศึกษา / เพื่อพัฒนาทักษะชีวิต / หญิง'],
+    'สกร.-หลักสูตรระยะสั้น' => ['หลักสูตรระยะสั้น / ชาย', 'หลักสูตรระยะสั้น / หญิง'],
+    'สกร.-การศึกษาชุมชนในเขตภูเขา' => ['การศึกษาชุมชน / ในเขตภูเขา / ชาย', 'การศึกษาชุมชน / ในเขตภูเขา / หญิง'],
+    'สกร.-กระบวนการเรียนรู้ตามแนวปรัชญาเศรษฐกิจพอเพียง' => [
+        'การบวนการเรียนรู้ตามแนว / ปรัชญาเศรษฐกิจพอเพียง / ชาย',
+        'การบวนการเรียนรู้ตามแนว / ปรัชญาเศรษฐกิจพอเพียง / หญิง',
+    ],
+    'สกร.-โครงการตามพระราชดำริ' => ['โครงการ / ตามพระราชดำริ / ชาย', 'โครงการ / ตามพระราชดำริ / หญิง'],
+    'สกร.-การศึกษาเพื่อพัฒนาสังคมและชุมชน' => ['การศึกษาเพื่อพัฒนา / สังคมและชุมชน / ชาย', 'การศึกษาเพื่อพัฒนา / สังคมและชุมชน / หญิง'],
+    'สกร.-โครงการศูนย์ฝึกอาชีพชุมชน' => ['โครงการ / ศูนย์ฝึกอาชีพชุมชน / ชาย', 'โครงการ / ศูนย์ฝึกอาชีพชุมชน / หญิง'],
+];
+$nfeActivityLabels = array_keys($nfeActivityGroups);
+
 // ชีทฟอร์ม 15 ที่นับเป็น "ผู้เรียนนอกระบบ" — ชุดเดียวกับที่ใช้ใน public_report_data.php metric
 // "จำนวนนักเรียน" (เฉพาะส่วนของฟอร์ม 15) คัดลอกมาตรงนี้แทนการ include ไฟล์นั้น เพราะไฟล์นั้นมี
 // ตัวแปรชื่อชนกันหลายตัว ($reporting, $selectedYear, $navQuery ฯลฯ) ไม่ได้ออกแบบให้ include ซ้อนกัน
@@ -126,7 +158,7 @@ $pmjColumns = [
 ];
 
 /** แถวว่างเปล่า 1 แถว (ทุกระดับชั้น = 0) ให้เติมตอนพบ school_code ใหม่จากฟอร์ม 11/15 ที่ฟอร์ม 4 ไม่มี */
-function grade_table_blank_row(string $schoolCode, string $schoolName, string $agencyName, string $amphoe, array $gradeLabels): array
+function grade_table_blank_row(string $schoolCode, string $schoolName, string $agencyName, string $amphoe, array $gradeLabels, array $nfeActivityLabels): array
 {
     $row = [
         'school_code' => $schoolCode,
@@ -134,12 +166,14 @@ function grade_table_blank_row(string $schoolCode, string $schoolName, string $a
         'agency_name' => $agencyName,
         'amphoe'      => $amphoe,
         'childcare_total' => ['male' => 0.0, 'female' => 0.0],
-        'nfe_total'   => ['male' => 0.0, 'female' => 0.0],
         'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
         'pmj_total'   => ['male' => 0.0, 'female' => 0.0],
     ];
     foreach ($gradeLabels as $label) {
         $row['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
+    }
+    foreach ($nfeActivityLabels as $label) {
+        $row['nfe_by_activity'][$label] = ['male' => 0.0, 'female' => 0.0];
     }
     return $row;
 }
@@ -155,7 +189,7 @@ foreach ($pivot4['rows'] as $r) {
     if ($code === '') {
         continue;
     }
-    $row = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
+    $row = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels, $nfeActivityLabels);
     foreach ($gradeGroups as $label => [$maleCol, $femaleCol]) {
         $m = $r[$maleCol] ?? '';
         $f = $r[$femaleCol] ?? '';
@@ -182,7 +216,7 @@ foreach ($pivot14['rows'] as $r) {
         continue;
     }
     if (!isset($rowsByCode[$code])) {
-        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
+        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels, $nfeActivityLabels);
     }
     foreach ($childcareChildColumns as $path) {
         $v = $r[$path] ?? '';
@@ -197,28 +231,36 @@ foreach ($pivot14['rows'] as $r) {
     }
 }
 
-// 3) ฟอร์ม 11.1 (ผู้เรียน กศน.) — โรงเรียนคนละกลุ่มกับฟอร์ม 4 เลย (กศน.ไม่กรอกฟอร์ม 4) เติมแถวใหม่
-// ถ้ายังไม่เคยเจอ school_code นี้มาก่อน แยกชาย/หญิง ได้เหมือนกัน เพราะทุกคอลัมน์ของชีทนี้ลงท้ายด้วย
-// "ชาย"/"หญิง" เสมอ (กิจกรรมการศึกษา×เพศ ไม่มีคอลัมน์ "รวม" ปนอยู่ — ตรวจแล้วตอนรวมฟอร์ม 11 เข้า
-// หน้าสถิติภาพรวม) จับคู่ด้วย regex ปลาย column_path แบบเดียวกับ Reporting::genderTotalsForColumns()
-$pivot111 = $reporting->pivot('11_nfe', '11.1', $selectedYear);
-foreach ($pivot111['rows'] as $r) {
-    $code = trim((string)($r['school_code'] ?? ''));
-    if ($code === '') {
-        continue;
-    }
-    if (!isset($rowsByCode[$code])) {
-        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
-    }
-    foreach ($pivot111['columns'] as $path) {
-        $v = $r[$path] ?? '';
-        if ($v === '' || !is_numeric($v)) {
+// 3) ฟอร์ม 11.1+11.2 (ผู้เรียน กศน. ปกติ+พิการ) — โรงเรียนคนละกลุ่มกับฟอร์ม 4 เลย (กศน.ไม่กรอกฟอร์ม 4)
+// เติมแถวใหม่ถ้ายังไม่เคยเจอ school_code นี้มาก่อน แยกเป็นคอลัมน์ตามกิจกรรมการศึกษา
+// ($nfeActivityGroups ข้างบน) แทนยอดรวมเดียวเหมือนเดิม (เปลี่ยนเมื่อ 2026-09-01 ตามคำขอผู้ใช้งาน) —
+// lookup ตรงด้วย column_path ของแต่ละกิจกรรมแบบเดียวกับ $gradeGroups ของฟอร์ม 4 แทนการวนคอลัมน์
+// ทั้งหมดด้วย regex เหมือนเดิม — **รวม 11.2 (ผู้เรียนพิการ) เข้ามาบวกด้วยเมื่อ 2026-09-01** ตามคำขอ
+// ผู้ใช้งาน เพราะ 11.1 ("ผู้เรียนปกติ") กับ 11.2 ("ผู้เรียนพิการ") เป็นคนละกลุ่มผู้เรียนที่ไม่ทับซ้อนกัน
+// (แยกแบบฟอร์มโดยตั้งใจ ไม่ใช่มองข้อมูลชุดเดียวกันคนละมิติแบบ 11.2/11.3 — ดูเหตุผลเต็มที่
+// public_report_data.php ต้องแก้คู่กันเสมอให้ metric 'students'/$genderSheets ที่นั่นรวม 11.2 ด้วย
+// เช่นกัน ไม่งั้นยอดรวมตารางนี้จะไม่ตรงกับหน้าภาพรวมอีก) โครงสร้างคอลัมน์ของ 11.2 ตรวจแล้วเหมือน 11.1
+// ทุกประการ จึงใช้ $nfeActivityGroups ชุดเดียวกัน — ผลรวมข้ามทั้ง 2 ชีท×13 กิจกรรม สะสมเข้า
+// nfe_by_activity เดียวกัน (ไม่แยกปกติ/พิการในตารางนี้ เพราะต้องการแค่ยอดรวมผู้เรียนต่อกิจกรรม)
+foreach (['11.1', '11.2'] as $nfeSheetName) {
+    $pivot11x = $reporting->pivot('11_nfe', $nfeSheetName, $selectedYear);
+    foreach ($pivot11x['rows'] as $r) {
+        $code = trim((string)($r['school_code'] ?? ''));
+        if ($code === '') {
             continue;
         }
-        if (preg_match('/ชาย$/u', $path)) {
-            $rowsByCode[$code]['nfe_total']['male'] += (float)$v;
-        } elseif (preg_match('/หญิง$/u', $path)) {
-            $rowsByCode[$code]['nfe_total']['female'] += (float)$v;
+        if (!isset($rowsByCode[$code])) {
+            $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels, $nfeActivityLabels);
+        }
+        foreach ($nfeActivityGroups as $label => [$maleCol, $femaleCol]) {
+            $m = $r[$maleCol] ?? '';
+            $f = $r[$femaleCol] ?? '';
+            if ($m !== '' && is_numeric($m)) {
+                $rowsByCode[$code]['nfe_by_activity'][$label]['male'] += (float)$m;
+            }
+            if ($f !== '' && is_numeric($f)) {
+                $rowsByCode[$code]['nfe_by_activity'][$label]['female'] += (float)$f;
+            }
         }
     }
 }
@@ -235,7 +277,7 @@ foreach ($privateNonformalSheets as [$formKey, $sheetName, $onlyColumns]) {
             continue;
         }
         if (!isset($rowsByCode[$code])) {
-            $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
+            $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels, $nfeActivityLabels);
         }
         foreach ($onlyColumns as $path) {
             $v = $r[$path] ?? '';
@@ -262,7 +304,7 @@ foreach ($pivot16['rows'] as $r) {
         continue;
     }
     if (!isset($rowsByCode[$code])) {
-        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels);
+        $rowsByCode[$code] = grade_table_blank_row($code, (string)($r['school_name'] ?? ''), (string)($r['agency_name'] ?? ''), (string)($r['amphoe'] ?? ''), $gradeLabels, $nfeActivityLabels);
     }
     foreach ($pmjColumns as $path) {
         $v = $r[$path] ?? '';
@@ -285,16 +327,23 @@ usort($gradeTableRows, static fn($a, $b) => strcmp($a['school_name'], $b['school
 // (ฟอร์ม 4/14/11/15/16) รวมเข้าแถวเดียวกันครบแล้ว กันไม่ให้ต้องคำนวณซ้ำ/พลาดจุดใดจุดหนึ่งถ้าไปคำนวณ
 // แทรกในแต่ละ pass ข้างบน
 // "รวมชาย"/"รวมหญิง" — ผลรวมแยกเพศข้ามทุกแหล่งข้อมูล (เพิ่มเมื่อ 2026-08-30 ตามคำขอผู้ใช้งาน) ทุก
-// แหล่งในตารางนี้แยกชาย/หญิงอยู่แล้วทั้งหมด (grades, childcare_total, nfe_total,
-// private_nonformal_total, pmj_total) จึงรวมตรง ๆ ได้เลย ไม่ต้องกังวลเรื่องแหล่งไหนไม่มีข้อมูลเพศ
+// แหล่งในตารางนี้แยกชาย/หญิงอยู่แล้วทั้งหมด (grades, childcare_total, nfe_by_activity,
+// private_nonformal_total, pmj_total) จึงรวมตรง ๆ ได้เลย ไม่ต้องกังวลเรื่องแหล่งไหนไม่มีข้อมูลเพศ —
+// รวมทุกกิจกรรมของ $nfeActivityLabels เสมอ (ไม่ใช่แค่รายการที่แสดงผลจริงหลังกรองคอลัมน์ว่าง) กัน
+// ยอดรวมขาดหายถ้ามีกิจกรรมที่ไม่มีข้อมูลเลยแต่ไม่ได้ถูกกรองออกด้วยเหตุผลอื่น (ในทางปฏิบัติค่าจะเป็น 0
+// อยู่แล้วไม่มีผลต่อผลรวม แต่เขียนให้ถูกต้องตามหลักการเสมอ)
 foreach ($gradeTableRows as &$gtRow) {
-    $grandMale = $gtRow['childcare_total']['male'] + $gtRow['nfe_total']['male']
+    $grandMale = $gtRow['childcare_total']['male']
         + $gtRow['private_nonformal_total']['male'] + $gtRow['pmj_total']['male'];
-    $grandFemale = $gtRow['childcare_total']['female'] + $gtRow['nfe_total']['female']
+    $grandFemale = $gtRow['childcare_total']['female']
         + $gtRow['private_nonformal_total']['female'] + $gtRow['pmj_total']['female'];
     foreach ($gradeLabels as $label) {
         $grandMale += $gtRow['grades'][$label]['male'];
         $grandFemale += $gtRow['grades'][$label]['female'];
+    }
+    foreach ($nfeActivityLabels as $label) {
+        $grandMale += $gtRow['nfe_by_activity'][$label]['male'];
+        $grandFemale += $gtRow['nfe_by_activity'][$label]['female'];
     }
     $gtRow['grand_total_male'] = $grandMale;
     $gtRow['grand_total_female'] = $grandFemale;
@@ -318,6 +367,20 @@ $agencyOptions = array_keys($agencyOptions);
 $amphoeOptions = array_keys($amphoeOptions);
 sort($agencyOptions, SORT_STRING | SORT_FLAG_CASE);
 sort($amphoeOptions, SORT_STRING | SORT_FLAG_CASE);
+
+// คอลัมน์กิจกรรม สกร. ที่จะแสดงจริง — ไม่โชว์คอลัมน์ที่ไม่มีข้อมูลเลยสักสถานศึกษาเดียว ตามคำขอ
+// ผู้ใช้งาน (2026-09-01) ตรวจจากข้อมูล**ทั้งหมดก่อนกรอง**เหมือน $agencyOptions/$amphoeOptions ข้างบน
+// เพื่อให้ชุดคอลัมน์ที่แสดงคงที่ ไม่เปลี่ยนไปมาตามตัวกรองค้นหาที่เลือกอยู่ — ไม่กระทบยอดรวม
+// (grand_total ยังรวมทุกกิจกรรมใน $nfeActivityLabels ทั้งหมดเสมอ ไม่ใช่แค่ที่แสดงผล)
+$nfeActivityLabelsShown = [];
+foreach ($nfeActivityLabels as $label) {
+    foreach ($gradeTableRows as $r) {
+        if ($r['nfe_by_activity'][$label]['male'] > 0 || $r['nfe_by_activity'][$label]['female'] > 0) {
+            $nfeActivityLabelsShown[] = $label;
+            break;
+        }
+    }
+}
 
 // ค้นหา/กรอง — ใช้ร่วมกันทั้งหน้าเว็บและ CSV export (export ที่ดาวน์โหลดจะตรงกับสิ่งที่กำลังดูอยู่
 // บนหน้าเว็บเสมอ) ค้นชื่อสถานศึกษาแบบ substring ไม่สนตัวพิมพ์เล็ก/ใหญ่ — ใช้ stripos() ธรรมดา ไม่ใช้
@@ -349,7 +412,7 @@ if ($searchName !== '' || $filterAgency || $filterAmphoe !== '') {
 $gradeTotals = [
     'grades' => [],
     'childcare_total' => ['male' => 0.0, 'female' => 0.0],
-    'nfe_total' => ['male' => 0.0, 'female' => 0.0],
+    'nfe_by_activity' => [],
     'private_nonformal_total' => ['male' => 0.0, 'female' => 0.0],
     'pmj_total' => ['male' => 0.0, 'female' => 0.0],
     'grand_total' => 0.0,
@@ -359,15 +422,20 @@ $gradeTotals = [
 foreach ($gradeLabels as $label) {
     $gradeTotals['grades'][$label] = ['male' => 0.0, 'female' => 0.0];
 }
+foreach ($nfeActivityLabels as $label) {
+    $gradeTotals['nfe_by_activity'][$label] = ['male' => 0.0, 'female' => 0.0];
+}
 foreach ($gradeTableRows as $r) {
     foreach ($gradeLabels as $label) {
         $gradeTotals['grades'][$label]['male'] += $r['grades'][$label]['male'];
         $gradeTotals['grades'][$label]['female'] += $r['grades'][$label]['female'];
     }
+    foreach ($nfeActivityLabels as $label) {
+        $gradeTotals['nfe_by_activity'][$label]['male'] += $r['nfe_by_activity'][$label]['male'];
+        $gradeTotals['nfe_by_activity'][$label]['female'] += $r['nfe_by_activity'][$label]['female'];
+    }
     $gradeTotals['childcare_total']['male'] += $r['childcare_total']['male'];
     $gradeTotals['childcare_total']['female'] += $r['childcare_total']['female'];
-    $gradeTotals['nfe_total']['male'] += $r['nfe_total']['male'];
-    $gradeTotals['nfe_total']['female'] += $r['nfe_total']['female'];
     $gradeTotals['private_nonformal_total']['male'] += $r['private_nonformal_total']['male'];
     $gradeTotals['private_nonformal_total']['female'] += $r['private_nonformal_total']['female'];
     $gradeTotals['pmj_total']['male'] += $r['pmj_total']['male'];

@@ -13,7 +13,8 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM ให้ Excel เปิดข้อความไทยถูกต้อง
 
-// ระดับชั้น, "เด็ก ศพด.", "ผู้เรียน สกร.", "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
+// ระดับชั้น, "เด็ก ศพด.", คอลัมน์ "สกร.-..." ต่อกิจกรรม (เฉพาะกิจกรรมที่มีข้อมูลจริง —
+// $nfeActivityLabelsShown), "ผู้เรียนนอกระบบ" และ "พมจ." แยกชาย/หญิงเป็นคนละคอลัมน์ทั้งหมด
 $header = ['รหัสสถานศึกษา', 'ชื่อสถานศึกษา', 'สังกัด/หน่วยงาน', 'อำเภอ', 'รวม', 'รวมชาย', 'รวมหญิง'];
 foreach ($gradeLabels as $label) {
     $header[] = $label . ' (ชาย)';
@@ -21,8 +22,10 @@ foreach ($gradeLabels as $label) {
 }
 $header[] = 'เด็ก ศพด. (ชาย)';
 $header[] = 'เด็ก ศพด. (หญิง)';
-$header[] = 'ผู้เรียน สกร. (ชาย)';
-$header[] = 'ผู้เรียน สกร. (หญิง)';
+foreach ($nfeActivityLabelsShown as $label) {
+    $header[] = $label . ' (ชาย)';
+    $header[] = $label . ' (หญิง)';
+}
 $header[] = 'ผู้เรียนนอกระบบ (ชาย)';
 $header[] = 'ผู้เรียนนอกระบบ (หญิง)';
 $header[] = 'พมจ. (ชาย)';
@@ -37,8 +40,10 @@ foreach ($gradeTableRows as $row) {
     }
     $line[] = $row['childcare_total']['male'];
     $line[] = $row['childcare_total']['female'];
-    $line[] = $row['nfe_total']['male'];
-    $line[] = $row['nfe_total']['female'];
+    foreach ($nfeActivityLabelsShown as $label) {
+        $line[] = $row['nfe_by_activity'][$label]['male'];
+        $line[] = $row['nfe_by_activity'][$label]['female'];
+    }
     $line[] = $row['private_nonformal_total']['male'];
     $line[] = $row['private_nonformal_total']['female'];
     $line[] = $row['pmj_total']['male'];
