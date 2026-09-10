@@ -115,3 +115,43 @@
   .bar-label, .kpi-col .bar-label { width: 100%; text-align: left; }
   .bar-value, .kpi-col .bar-value { width: auto; }
 }
+
+/* สรุปภาพรวมสำหรับผู้บริหาร (stat tile แบบไอคอน) + กราฟโดนัท + การ์ดสรุปรายอำเภอ — เพิ่มเมื่อ
+   2026-09-10 ตามคำขอผู้ใช้งานให้หน้าแดชบอร์ดมีหน้าตาแบบเว็บตัวอย่างที่ส่งมา (สไตล์ executive dashboard
+   ดูรวบรัดได้ทันที) โดยยังคงกราฟ/ตารางเดิมทั้งหมดของระบบไว้ครบ ไม่มีจุดไหนลบเนื้อหาเดิมทิ้ง แค่จัดวาง
+   กราฟอำเภอ/ต้นสังกัดขึ้นมาไว้ต้นหน้าแทนที่จะอยู่ปนกับกราฟละเอียดด้านล่าง */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat-tile { display: flex; flex-direction: column; gap: 8px; }
+.stat-tile .stat-tile-label { font-size: 13px; color: var(--ink-secondary); font-weight: 600; }
+.stat-tile .stat-tile-value { font-size: 26px; font-weight: 700; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
+.stat-tile .stat-tile-sub { font-size: 12px; color: var(--ink-muted); }
+
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: stretch; }
+.chart-row > .card { margin-bottom: 0; }
+@media (max-width: 800px) { .chart-row { grid-template-columns: 1fr; } }
+
+.card-head-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.card-head-row h2 { margin: 0; }
+
+/* กราฟโดนัท — วาดด้วย conic-gradient ล้วน ๆ (ไม่พึ่ง JS chart library เหมือนกราฟแท่งด้านบนทั้งระบบ) */
+.donut-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.donut { width: 170px; height: 170px; min-width: 170px; border-radius: 50%; position: relative; }
+.donut-hole {
+  position: absolute; inset: 24%;
+  background: var(--card, #fff);
+  border-radius: 50%;
+}
+.donut-legend { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 9px; }
+.donut-legend .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.donut-legend .legend-label { flex: 1; color: var(--ink-secondary); overflow-wrap: anywhere; }
+.donut-legend .legend-value { font-weight: 600; color: var(--ink-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* การ์ดสรุปรายอำเภอ */
+.district-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.district-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.district-card-head .name { font-weight: 700; font-size: 15px; color: var(--ink-primary); }
+.district-card .meta { font-size: 12px; color: var(--ink-muted); margin-bottom: 12px; }
+.district-card .num-label { font-size: 12px; color: var(--ink-muted); }
+.district-card .num-value { font-size: 20px; font-weight: 700; color: var(--primary); margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+.progress-track { height: 6px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--primary); border-radius: 999px; }

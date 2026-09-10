@@ -243,6 +243,13 @@ arsort($studentsByAmphoe);
 $studentsByEducationForm = compute_metric_totals($reporting, 'students', $metrics['students'], 'education_form', $selectedYear);
 arsort($studentsByEducationForm);
 
+// จำนวนสถานศึกษาแยกตามอำเภอ — คู่กับ $studentsByAmphoe ข้างบน สำหรับการ์ดสรุปรายอำเภอหน้าแดชบอร์ด
+// (เพิ่มเมื่อ 2026-09-10 ตามคำขอผู้ใช้งานให้มีข้อมูลสรุปเชิงบริหารเพิ่ม) ใช้ schoolCountByDimension
+// ตัวเดียวกับที่ metric 'schools' ใช้อยู่แล้วทั้งระบบ (compute_metric_totals กรณี key==='schools' จะ
+// เรียกฟังก์ชันนี้ให้เอง) ไม่ได้เขียน query ใหม่
+$schoolsByAmphoe = compute_metric_totals($reporting, 'schools', $metrics['schools'], 'amphoe', $selectedYear);
+arsort($schoolsByAmphoe);
+
 // สัดส่วนนักเรียนชาย:หญิง — ใช้คอลัมน์ชุดเดียวกับตัวเลข "จำนวนนักเรียน" ด้านบนทุกประการ แต่ใช้คอลัมน์
 // แยกเพศดิบแทนคอลัมน์ "รวม"/"รวมทั้งสิ้น" (ซึ่งไม่มีเพศให้แยก) — ดู Reporting::genderTotalsForColumns
 $genderSheets = [
@@ -313,6 +320,17 @@ $teacherGenderTotal = $teacherGenderMale + $teacherGenderFemale;
 $totalStudents = array_sum($dataByMetric['students']);
 $totalTeachers = array_sum($dataByMetric['teachers']);
 $studentTeacherRatio = $totalTeachers > 0 ? $totalStudents / $totalTeachers : null;
+
+// ตัวเลขสรุประดับผู้บริหาร — สำหรับตอบคำถามที่ผู้ว่าราชการจังหวัด/ศึกษาธิการจังหวัดมักถามได้ทันที
+// (เพิ่มเมื่อ 2026-09-10 ตามคำขอผู้ใช้งาน) **ทุกตัวคำนวณต่อจากยอดที่มีอยู่แล้วด้านบนในไฟล์นี้เท่านั้น
+// ไม่ได้เพิ่ม query หรือ logic กรองข้อมูลใหม่ — array_sum ของ $dataByMetric[...] ปลอดภัยแม้ผลลัพธ์เดิม
+// คำนวณตามมิติที่เลือกบน dropdown ($selectedDimension) เพราะยอดรวมทุกกลุ่มเท่ากันไม่ว่าจะแยกตามมิติไหน**
+$totalSchools = array_sum($dataByMetric['schools']);
+$schoolsByAgency = compute_metric_totals($reporting, 'schools', $metrics['schools'], 'agency_name', $selectedYear);
+$totalAmphoeServed = count(array_filter(array_keys($schoolsByAmphoe), static fn($k) => $k !== 'ไม่ระบุ'));
+$totalAgencies = count(array_filter(array_keys($schoolsByAgency), static fn($k) => $k !== 'ไม่ระบุ'));
+$totalDropout = array_sum($dataByMetric['dropout']);
+$dropoutRateOverall = $totalStudents > 0 ? $totalDropout / $totalStudents * 100 : null;
 
 // นักเรียนออกกลางคัน แยกตามสาเหตุ — รวมทั้ง 6 ชีท (แยกตามช่วงชั้นเดิม) เข้าด้วยกัน ตัดมิติ "ชั้นปี"
 // (level แรก) กับ "เพศ" (level สุดท้าย) ออก เหลือแค่ "สาเหตุ" — ดู Reporting::sumByColumnPathParts
@@ -428,6 +446,45 @@ function render_bar_chart(array $data, callable $formatValue): void
         echo '<div class="bar-value">' . h($valueLabel) . '</div>';
         echo '</div>';
     }
+    echo '</div>';
+}
+
+// เรนเดอร์กราฟโดนัท 1 ชุด (วงกลม conic-gradient ล้วน ๆ ด้วย CSS ไม่พึ่ง JS chart library ใด ๆ — ระบบนี้
+// ไม่เคยใช้ JS chart library เลยทั้งระบบ ดู render_bar_chart ด้านบน) + legend สีกำกับทุกหมวดพร้อมค่า/%
+// เสมอ (ไม่ได้ใช้สีเป็นตัวบ่งชี้ความหมายเพียงอย่างเดียว) เพิ่มเมื่อ 2026-09-10 ตามคำขอผู้ใช้งานให้มีกราฟ
+// สัดส่วนแบบวงกลมเหมือนเว็บตัวอย่างที่ส่งมา
+function render_donut_chart(array $data, callable $formatValue): void
+{
+    if (!$data) {
+        echo '<p class="muted">ยังไม่มีข้อมูล</p>';
+        return;
+    }
+    $palette = ['#16a34a', '#2563eb', '#db2777', '#7c3aed', '#d97706', '#0891b2', '#64748b', '#ea580c'];
+    $total = array_sum($data);
+    $stops = [];
+    $legendRows = [];
+    $cursor = 0.0;
+    $i = 0;
+    foreach ($data as $label => $value) {
+        $pct = $total > 0 ? (float)$value / $total * 100 : 0.0;
+        $color = $palette[$i % count($palette)];
+        $end = $cursor + $pct;
+        $stops[] = sprintf('%s %.3f%% %.3f%%', $color, $cursor, $end);
+        $cursor = $end;
+        $legendRows[] = ['color' => $color, 'label' => (string)$label, 'value' => $value, 'pct' => $pct];
+        $i++;
+    }
+    echo '<div class="donut-wrap">';
+    echo '<div class="donut" style="background: conic-gradient(' . h(implode(', ', $stops)) . ');"><div class="donut-hole"></div></div>';
+    echo '<div class="donut-legend">';
+    foreach ($legendRows as $row) {
+        echo '<div class="legend-row">'
+            . '<span class="swatch" style="background:' . h((string)$row['color']) . '"></span>'
+            . '<span class="legend-label">' . h((string)$row['label']) . '</span>'
+            . '<span class="legend-value">' . h($formatValue($row['value'])) . ' (' . h(number_format((float)$row['pct'], 1)) . '%)</span>'
+            . '</div>';
+    }
+    echo '</div>';
     echo '</div>';
 }
 $fmtPeople = static fn($v) => fmt_num($v) . ' คน';
