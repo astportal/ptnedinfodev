@@ -74,9 +74,7 @@ render_report_start('charts');
            $studentsByAmphoe/$schoolsByAmphoe ที่มีอยู่แล้วในหน้านี้ ไม่ได้เพิ่ม query ใหม่ — % คือสัดส่วน
            ต่อยอดผู้เรียนทั้งจังหวัด แถบกราฟเทียบกับอำเภอที่มีผู้เรียนมากที่สุด (แบบเดียวกับกราฟแท่งอื่น
            ในหน้านี้ทั้งหมด) -->
-      <h2 style="margin: 28px 0 4px;">🗺️ สรุปข้อมูลรายอำเภอ (<?= h(fmt_num($totalAmphoeServed)) ?> อำเภอ)</h2>
-      <p class="muted" style="margin-bottom:16px;">คลิกที่อำเภอเพื่อค้นหาสถานศึกษาในพื้นที่ได้ที่หน้า
-        "<a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>">ค้นหารหัสสถานศึกษา</a>" — % คือสัดส่วนผู้เรียนต่อยอดรวมทั้งจังหวัด</p>
+      <h2 style="margin: 28px 0 16px;">🗺️ สรุปข้อมูลรายอำเภอ (<?= h(fmt_num($totalAmphoeServed)) ?> อำเภอ)</h2>
       <div class="district-grid viz-root">
         <?php
           // max เฉพาะอำเภอจริง ไม่รวม "ไม่ระบุ" (ไม่งั้นถ้าโรงเรียนที่ยังจับคู่อำเภอไม่ได้มีเยอะ
