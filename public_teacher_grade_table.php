@@ -73,7 +73,36 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
       <?php if (!$gradeTableRows): ?>
         <p class="muted">ไม่พบสถานศึกษาที่ตรงกับเงื่อนไขค้นหานี้</p>
       <?php else: ?>
-        <p class="muted">พบ <?= count($gradeTableRows) ?> สถานศึกษา</p>
+        <!-- สรุปจำนวนตามผลค้นหาปัจจุบัน (เพิ่มเมื่อ 2026-09-10 ตามคำขอผู้ใช้งาน) — ใช้ $gradeTotals/
+             count($gradeTableRows) ตัวเดียวกับที่แถว "รวม (ตามผลค้นหาปัจจุบัน)" ในตารางด้านล่างใช้อยู่
+             แล้วทุกประการ ไม่ได้เพิ่ม query ใหม่ อัปเดตตามฟิลเตอร์ที่เลือกอยู่เสมอ (ไม่ใช่ยอดรวมทั้งจังหวัด
+             ตายตัว) -->
+        <div class="stat-grid viz-root">
+          <div class="card stat-tile">
+            <span class="icon-badge green">🏫</span>
+            <div class="stat-tile-label">สถานศึกษาที่พบ</div>
+            <div class="stat-tile-value"><?= h(fmt_num(count($gradeTableRows))) ?></div>
+            <div class="stat-tile-sub">แห่ง</div>
+          </div>
+          <div class="card stat-tile">
+            <span class="icon-badge purple">👨‍🏫</span>
+            <div class="stat-tile-label">ครู/ผู้สอนทั้งหมด</div>
+            <div class="stat-tile-value"><?= h(fmt_num($gradeTotals['grand_total'])) ?></div>
+            <div class="stat-tile-sub">คน</div>
+          </div>
+          <div class="card stat-tile">
+            <span class="icon-badge cyan">👦</span>
+            <div class="stat-tile-label">ครู/ผู้สอนชาย</div>
+            <div class="stat-tile-value"><?= h(fmt_num($gradeTotals['grand_total_male'])) ?></div>
+            <div class="stat-tile-sub">คน</div>
+          </div>
+          <div class="card stat-tile">
+            <span class="icon-badge pink">👧</span>
+            <div class="stat-tile-label">ครู/ผู้สอนหญิง</div>
+            <div class="stat-tile-value"><?= h(fmt_num($gradeTotals['grand_total_female'])) ?></div>
+            <div class="stat-tile-sub">คน</div>
+          </div>
+        </div>
         <div class="report-table-scroll">
           <table class="stats-table">
             <thead>
