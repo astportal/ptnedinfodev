@@ -1,13 +1,18 @@
 :root {
-  --bg: #f4f6f8;
+  --bg: #f4f7f5;
   --card: #ffffff;
   --text: #1f2937;
   --muted: #6b7280;
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
+  --primary: #16a34a;
+  --primary-dark: #15803d;
+  --primary-light: #dcfce7;
+  --navy: #0d2b22;
+  --navy-2: #0a1a20;
   --border: #e5e7eb;
   --ok: #16a34a;
   --err: #dc2626;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 10px 24px -16px rgba(15, 23, 42, .18);
   --topbar-h: 58px; /* ความสูงขั้นต่ำของ topbar (ค่าประมาณ ไม่ fix ตายตัว ยืดได้ถ้า nav ตกบรรทัดบนจอ
                         แคบมาก) — ไม่ได้ใช้อ้างอิง sticky offset ของหัวตารางอีกต่อไป (ลองแล้วใช้ไม่ได้
                         กับ .table-scroll ดู comment ที่ th ด้านล่าง) */
@@ -21,11 +26,12 @@ body {
 }
 /* ปักหมุด topbar ไว้บนสุดเสมอตอนเลื่อนหน้าจอ (แก้เมื่อ 2026-09-01 ตามคำขอผู้ใช้งาน — เดิมเมนูเลื่อน
    หายไปพร้อมเนื้อหาด้านล่าง หน้ารายงานที่มีการ์ดเยอะ ๆ ต้องเลื่อนกลับขึ้นบนสุดทุกครั้งกว่าจะสลับหน้าได้
-   ทำให้สับสน) เงาบาง ๆ ให้รู้สึกว่าลอยอยู่เหนือเนื้อหาเสมอ ไม่ต้องรอ JS ตรวจ scroll */
+   ทำให้สับสน) เงาบาง ๆ ให้รู้สึกว่าลอยอยู่เหนือเนื้อหาเสมอ ไม่ต้องรอ JS ตรวจ scroll
+   สไตล์ไล่เฉดเขียวเข้ม + โลโก้ (แก้เมื่อ 2026-09-10 ตามภาพตัวอย่างที่ผู้ใช้งานส่งมา — ทำผ่าน ::before
+   pseudo-element ล้วน ๆ ไม่แก้ markup ของ 13 ไฟล์ที่มี .topbar ซ้ำกันอยู่เลยสักไฟล์เดียว) */
 .topbar {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(120deg, #146c43 0%, #0b3d26 100%);
+  box-shadow: 0 2px 14px rgba(6, 30, 20, .25);
   padding: 10px 24px;
   min-height: var(--topbar-h);
   display: flex;
@@ -37,24 +43,39 @@ body {
   top: 0;
   z-index: 100;
 }
-.topbar a { color: var(--text); text-decoration: none; font-weight: 600; }
+.topbar a { color: #fff; text-decoration: none; font-weight: 600; }
+.topbar > a:first-child { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; }
+.topbar > a:first-child::before {
+  content: "🎓";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, .16);
+  border-radius: 9px;
+  font-size: 17px;
+}
 .topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
 .topbar nav a {
   margin-right: 2px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, .82);
   font-weight: 500;
   font-size: 14px;
   padding: 7px 12px;
   border-radius: 8px;
   transition: background-color .15s ease, color .15s ease;
 }
-.topbar nav a:hover { color: var(--primary); background: #eef2ff; }
-.topbar nav a.active { color: var(--primary); font-weight: 700; background: #e0e7ff; }
+.topbar nav a:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+.topbar nav a.active { color: var(--primary-dark); font-weight: 700; background: #fff; }
+.topbar nav .muted { color: rgba(255, 255, 255, .7) !important; }
 .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 20px;
   margin-bottom: 20px;
 }
@@ -75,21 +96,24 @@ th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; w
    แรกอยู่แล้ว** เอา position:sticky ออกจึงไม่กระทบพฤติกรรมที่ผู้ใช้เคยเห็นจริง ๆ เลย — ตารางที่ต้องการ
    หัวตาราง sticky แบบเห็นผลจริงให้ใช้ .report-table-scroll แทน (มี max-height+overflow ทั้ง 2 แกนจริง
    ดู .stats-table.two-row-header ใน public_report.css เป็นตัวอย่าง) */
-th { background: #f9fafb; }
-.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+th { background: #f0fdf4; }
+tbody tr:hover td { background: #fafbfa; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
 .btn {
   display: inline-block;
   background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 9px;
   padding: 9px 16px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
+  box-shadow: 0 4px 10px -4px rgba(22, 163, 74, .5);
 }
 .btn:hover { background: var(--primary-dark); }
-.btn-secondary { background: #6b7280; }
+.btn-secondary { background: #6b7280; box-shadow: none; }
 .btn-secondary:hover { background: #4b5563; }
 input[type=text], input[type=password], input[type=file], select {
   width: 100%;
@@ -111,3 +135,81 @@ label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
 .form-card { display: block; text-decoration: none; color: inherit; }
 .form-card:hover { border-color: var(--primary); }
 .form-card .count { font-size: 28px; font-weight: 700; color: var(--primary); }
+
+/* ไอคอนวงกลม/สี่เหลี่ยมมนสีพาสเทลหน้าเลขสถิติ — ใช้กับการ์ดสรุปยอดต่าง ๆ (แก้เมื่อ 2026-09-10
+   ให้ธีมใกล้เคียงภาพตัวอย่างที่ผู้ใช้งานส่งมา) เลือกสีตาม hue ที่แยกกันชัดเจน ไม่ได้ใช้สีเป็นตัวบ่งชี้
+   ความหมายอะไรเป็นพิเศษ แค่ช่วยแยกการ์ดแต่ละใบด้วยสายตา ตัวเลข/ป้ายกำกับข้างๆ ยังเป็นตัวบอกความหมายหลัก */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.icon-badge.blue   { background: #dbeafe; color: #2563eb; }
+.icon-badge.green  { background: #dcfce7; color: #16a34a; }
+.icon-badge.pink   { background: #fce7f3; color: #db2777; }
+.icon-badge.purple { background: #ede9fe; color: #7c3aed; }
+.icon-badge.orange { background: #fef3c7; color: #d97706; }
+.icon-badge.cyan   { background: #cffafe; color: #0891b2; }
+
+/* การ์ดเปิดหัวเรื่องแบบเข้มไล่เฉด — ใช้เป็นกล่อง hero ด้านบนหน้ารายงานสาธารณะ +footer ท้ายเว็บ
+   ให้เข้าธีมเดียวกับ .topbar (โทนเข้ม คั่นเนื้อหาขาวไว้ตรงกลาง) */
+.hero-card {
+  background: linear-gradient(135deg, #0f2a24 0%, #0a1a20 100%);
+  color: #fff;
+  border: none;
+}
+.hero-card h1, .hero-card p { color: #fff; }
+.hero-card .muted { color: rgba(255, 255, 255, .68); }
+.hero-badge {
+  display: inline-block;
+  background: rgba(22, 163, 74, .28);
+  color: #86efac;
+  border: 1px solid rgba(134, 239, 172, .35);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.hero-card .filter-bar label { color: rgba(255, 255, 255, .8); }
+.hero-card .filter-bar select {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .25);
+  color: #fff;
+}
+.hero-card .filter-bar select option { color: #1f2937; }
+
+.site-footer {
+  background: linear-gradient(135deg, #0f2a24 0%, #0a1a20 100%);
+  color: rgba(255, 255, 255, .75);
+  margin-top: 32px;
+  padding: 32px 24px 18px;
+}
+.site-footer a { color: rgba(255, 255, 255, .75); text-decoration: none; }
+.site-footer a:hover { color: #fff; text-decoration: underline; }
+.site-footer h3 { color: #fff; font-size: 15px; margin: 0 0 12px; }
+.site-footer .footer-cols {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+.site-footer .footer-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.site-footer .footer-bottom {
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  font-size: 13px;
+  color: rgba(255, 255, 255, .55);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}

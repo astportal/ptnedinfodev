@@ -13,12 +13,14 @@ render_report_start('charts');
       <div class="card viz-root">
         <div class="kpi-row">
           <div class="kpi-col">
-            <h3>จำนวนผู้เรียนทั้งหมด</h3>
+            <span class="icon-badge blue">🧑‍🎓</span>
+            <h3 style="margin-top:10px;">จำนวนผู้เรียนทั้งหมด</h3>
             <div class="stat-value"><?= h(fmt_num($totalStudents)) ?></div>
             <div class="stat-sub">คน</div>
           </div>
           <div class="kpi-col">
-            <h3>จำนวนผู้สอนทั้งหมด</h3>
+            <span class="icon-badge orange">👨‍🏫</span>
+            <h3 style="margin-top:10px;">จำนวนผู้สอนทั้งหมด</h3>
             <div class="stat-value"><?= h(fmt_num($totalTeachers)) ?></div>
             <div class="stat-sub">คน</div>
           </div>

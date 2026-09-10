@@ -498,18 +498,19 @@ function render_report_start(string $activePage): void
 <div class="topbar">
   <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
   <nav>
-    <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">ภาพรวม</a>
-    <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">ตารางสรุปยอดรวม</a>
-    <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'grades' ? 'active' : '' ?>">ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'teacher_grades' ? 'active' : '' ?>">ครูผู้สอน</a>
-    <a href="public_population.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'population' ? 'active' : '' ?>">ประชากรวัยเรียน</a>
-    <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">ค้นหารหัสสถานศึกษา</a>
-    <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
+    <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">📊 ภาพรวม</a>
+    <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">📋 ตารางสรุปยอดรวม</a>
+    <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'grades' ? 'active' : '' ?>">🏫 ผู้เรียนรายชั้น</a>
+    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'teacher_grades' ? 'active' : '' ?>">👨‍🏫 ครูผู้สอน</a>
+    <a href="public_population.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'population' ? 'active' : '' ?>">👥 ประชากรวัยเรียน</a>
+    <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">🔍 ค้นหารหัสสถานศึกษา</a>
+    <a href="login.php">🔑 เข้าสู่ระบบเจ้าหน้าที่</a>
   </nav>
 </div>
 <div class="container" style="max-width: 98vw;">
   <div class="report-main">
-    <div class="card">
+    <div class="card hero-card">
+      <span class="hero-badge">ข้อมูลเผยแพร่ต่อสาธารณะ</span>
       <h1>สถิติการศึกษาจังหวัดปัตตานี ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
       <p class="muted">สรุปยอดรวมระดับจังหวัดจากข้อมูลที่หน่วยงานทางการศึกษาในจังหวัดส่งกลับผ่านระบบ
         รวบรวมข้อมูลของสำนักงานศึกษาธิการจังหวัดปัตตานี — เป็นตัวเลขสรุประดับสังกัด/อำเภอเท่านั้น
@@ -548,12 +549,38 @@ function render_report_start(string $activePage): void
 /** ปิด .report-main / .container ที่เปิดไว้ใน render_report_start() + footer */
 function render_report_end(): void
 {
+    global $navQuery, $selectedYear;
     ?>
   </div>
 </div>
-<footer style="text-align:center; padding:20px 16px; margin-top:12px;">
-  <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี<br>
-    ข้อมูล ณ วันที่เข้าถึงหน้านี้ (อัปเดตอัตโนมัติทุกครั้งที่มีการนำเข้าข้อมูลใหม่)</p>
+<footer class="site-footer">
+  <div class="footer-cols">
+    <div>
+      <h3>🎓 สถิติการศึกษาจังหวัดปัตตานี</h3>
+      <p style="font-size:13px; line-height:1.6; margin:0;">
+        ข้อมูลรวบรวมโดยสำนักงานศึกษาธิการจังหวัดปัตตานี — อัปเดตอัตโนมัติทุกครั้งที่มีการนำเข้าข้อมูลใหม่
+        เป็นตัวเลขสรุประดับสังกัด/อำเภอเท่านั้น</p>
+    </div>
+    <div>
+      <h3>เมนูลัด</h3>
+      <ul class="footer-links">
+        <li><a href="public_report.php?<?= h($navQuery) ?>">› ภาพรวม (Dashboard)</a></li>
+        <li><a href="public_report_table.php?<?= h($navQuery) ?>">› ตารางสรุปยอดรวม</a></li>
+        <li><a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>">› ผู้เรียนรายชั้น</a></li>
+        <li><a href="public_population.php?year=<?= h((string)$selectedYear) ?>">› ประชากรวัยเรียน</a></li>
+        <li><a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>">› ค้นหารหัสสถานศึกษา</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>สำหรับเจ้าหน้าที่</h3>
+      <ul class="footer-links">
+        <li><a href="login.php">🔑 เข้าสู่ระบบเจ้าหน้าที่</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© <?= h((string)((int)date('Y') + 543)) ?> สำนักงานศึกษาธิการจังหวัดปัตตานี สงวนลิขสิทธิ์</span>
+  </div>
 </footer>
 </body>
 </html>

@@ -51,8 +51,11 @@
   --ink-secondary: #52514e;
   --ink-muted:     #898781;
   --gridline:      #e1e0d9;
-  --series-1:      #7fb3e0; /* ฟ้าพาสเทล — ชาย / นักเรียน (คอลัมน์เดียว) */
+  --series-1:      #7fb3e0; /* ฟ้าพาสเทล — ชาย (เฉพาะกราฟแยกเพศ .gender-bar/.gender-seg เท่านั้น) */
   --series-2:      #f4a6c6; /* ชมพูพาสเทล — หญิง */
+  --series-brand:  #16a34a; /* เขียวแบรนด์ — กราฟแท่งทั่วไปที่ไม่ได้แยกเพศ (.bar-fill) แก้เมื่อ
+                                2026-09-10 ให้เข้าธีมเขียวตามภาพตัวอย่างที่ผู้ใช้งานส่งมา เดิมใช้
+                                --series-1 ปนกับกราฟแยกเพศ แยกตัวแปรออกมาไม่ให้ปนความหมายกัน */
 }
 .kpi-row { display: flex; gap: 24px; flex-wrap: wrap; }
 .kpi-col { flex: 1; min-width: 260px; }
@@ -94,7 +97,7 @@
 .bar-row { display: flex; align-items: center; gap: 10px; }
 .bar-label { width: 240px; flex-shrink: 0; font-size: 13px; color: var(--ink-secondary); text-align: right; overflow-wrap: break-word; }
 .bar-wrap { flex: 1; min-width: 0; }
-.bar-fill { height: 20px; max-height: 20px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 3px; }
+.bar-fill { height: 20px; max-height: 20px; background: var(--series-brand); border-radius: 0 10px 10px 0; min-width: 3px; }
 .bar-value { width: 72px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
 /* กราฟแท่งที่อยู่ในคอลัมน์แคบ (kpi-col เช่น อันดับสูงสุด/ต่ำสุด) ต้องย่อป้ายชื่อ/ค่าให้พอดีคอลัมน์ */
 .kpi-col .bar-label { width: 96px; font-size: 12px; }
