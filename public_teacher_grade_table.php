@@ -168,5 +168,6 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
   <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี</p>
 </footer>
+<?php render_survey_fab(); ?>
 </body>
 </html>

@@ -213,3 +213,38 @@ label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* ปุ่มลอยลิงก์ประเมินความพึงพอใจ (เพิ่มเมื่อ 2026-09-23 ตามคำขอผู้ใช้งาน) — ลอยมุมล่างขวาทุกหน้า
+   สาธารณะที่มีข้อมูลให้ดู/ดาวน์โหลด ปิดได้เอง (บันทึกไว้ใน localStorage ของเบราว์เซอร์ผู้ใช้แต่ละคน
+   เท่านั้น ไม่แตะฐานข้อมูลฝั่งเซิร์ฟเวอร์เลย — ดู comment ใน public_report_data.php/หน้าที่แทรกปุ่มนี้)
+   ปิดแล้วไม่โผล่ซ้ำ 30 วัน กันไม่ให้รำคาญคนที่เข้าบ่อย ๆ */
+.survey-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px -6px rgba(22, 163, 74, .55);
+  transition: transform .15s ease, background-color .15s ease;
+}
+.survey-fab:hover { background: var(--primary-dark); color: #fff; transform: translateY(-2px); }
+.survey-fab .survey-fab-close {
+  margin-left: 2px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  font-size: 12px;
+  opacity: .75;
+}
+.survey-fab .survey-fab-close:hover { opacity: 1; background: rgba(255, 255, 255, .2); }
+@media (max-width: 480px) {
+  .survey-fab { right: 12px; bottom: 12px; padding: 10px 14px; font-size: 13px; }
+}

@@ -639,6 +639,7 @@ function render_report_end(): void
     <span>© <?= h((string)((int)date('Y') + 543)) ?> สำนักงานศึกษาธิการจังหวัดปัตตานี สงวนลิขสิทธิ์</span>
   </div>
 </footer>
+<?php render_survey_fab(); ?>
 </body>
 </html>
     <?php
