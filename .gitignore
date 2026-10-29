@@ -5,3 +5,4 @@ exelform/
 .DS_Store
 *.log
 .claude/
+.superpowers/
