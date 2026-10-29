@@ -94,29 +94,17 @@ if ($summaryField !== null && $pivot['rows']) {
         'rows'    => $summaryRows,
     ];
 }
+render_app_shell_start($formDef['form_label'], 'ptnedinfo — ระบบรวบรวมข้อมูล', admin_nav_items(), '');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<title><?= h($sheetName) ?> — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
-  <nav>
-    <a href="index.php">แดชบอร์ด</a>
-    <a href="upload.php?form=<?= urlencode($formKey) ?>">อัปโหลดไฟล์</a>
-    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
-    <span class="muted"><?= h(Auth::displayName()) ?></span>
-    &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
-  </nav>
-</div>
 <div class="container" style="max-width: 100%;">
   <div class="card">
-    <h1><?= h($formDef['form_label']) ?></h1>
-    <h2 class="muted" style="font-weight:400;"><?= h($sheetName) ?></h2>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h1><?= h($formDef['form_label']) ?></h1>
+        <h2 class="muted" style="font-weight:400;"><?= h($sheetName) ?></h2>
+      </div>
+      <a class="btn btn-secondary" href="upload.php?form=<?= urlencode($formKey) ?>">⬆️ อัปโหลดไฟล์เพิ่ม</a>
+    </div>
     <?php if ($yearFilterAvailable && $availableYears): ?>
       <form method="get" style="display:flex; gap:12px; align-items:flex-end; margin:12px 0;">
         <input type="hidden" name="form" value="<?= h($formKey) ?>">
@@ -251,5 +239,4 @@ if ($summaryField !== null && $pivot['rows']) {
     <?php endif; ?>
   </div>
 </div>
-</body>
-</html>
+<?php render_app_shell_end(); ?>

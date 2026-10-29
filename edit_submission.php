@@ -124,28 +124,17 @@ $currentValues = [];
 foreach ($valStmt->fetchAll() as $v) {
     $currentValues[(int)$v['col_index']] = $v;
 }
+render_app_shell_start('แก้ไขข้อมูล', 'ptnedinfo — ระบบรวบรวมข้อมูล', admin_nav_items(), '');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<title>แก้ไขข้อมูล — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
-  <nav>
-    <a href="index.php">แดชบอร์ด</a>
-    <a href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">กลับไปดูข้อมูล</a>
-    <span class="muted"><?= h(Auth::displayName()) ?></span>
-    &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
-  </nav>
-</div>
 <div class="container">
   <div class="card">
-    <h1>แก้ไขข้อมูล</h1>
-    <p class="muted"><?= h($formDef['form_label']) ?> — <?= h($sheetName) ?></p>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h1>แก้ไขข้อมูล</h1>
+        <p class="muted"><?= h($formDef['form_label']) ?> — <?= h($sheetName) ?></p>
+      </div>
+      <a class="btn btn-secondary" href="view.php?form=<?= urlencode($formKey) ?>&sheet=<?= urlencode($sheetName) ?>">← กลับไปดูข้อมูล</a>
+    </div>
     <?php if ($flash): ?><div class="alert alert-ok"><?= h($flash) ?></div><?php endif; ?>
 
     <form method="post">
@@ -179,5 +168,4 @@ foreach ($valStmt->fetchAll() as $v) {
     </form>
   </div>
 </div>
-</body>
-</html>
+<?php render_app_shell_end(); ?>
