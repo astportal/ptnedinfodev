@@ -120,7 +120,12 @@ function public_nav_items(array $queryParams): array
  * 2026-10-29 แทนที่เมนูบนแนวนอนเดิมด้วยเมนูซ้าย) ปิดด้วย render_app_shell_end() เสมอ — เพิ่ม viewport
  * meta tag ให้ทุกหน้าที่เรียกใช้ฟังก์ชันนี้โดยอัตโนมัติ (หน้าแอดมินหลายหน้าไม่มี tag นี้มาตั้งแต่ต้น
  * ทำให้เมนูมือถือใช้งานไม่ได้จริงบนโทรศัพท์) โชว์กล่องชื่อผู้ใช้+ออกจากระบบท้าย sidebar อัตโนมัติเมื่อ
- * login แล้ว (Auth::check() คืน false เงียบ ๆ บนหน้าสาธารณะที่ไม่เคย login เลย ไม่ error)
+ * login แล้ว — เช็กด้วย `session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id'])`
+ * ตรง ๆ ไม่เรียก Auth::check() (ซึ่งเรียก Auth::start()/session_start() เองถ้ายังไม่เคย start)
+ * เพราะหน้าสาธารณะไม่เคย requireLogin() มาก่อนเลย ถ้าเรียก Auth::check() ตรงนี้จะเป็นการ start
+ * session ใหม่ให้ผู้เข้าชมทุกคนทั้งที่ไม่ได้ login (ตั้งคุกกี้ PHPSESSID ลอย ๆ) — แก้เมื่อ 2026-10-29
+ * หลัง code review พบปัญหานี้ (เดิมเขียนไว้ผิดว่า "Auth::check() คืน false เงียบ ๆ ไม่ error" ซึ่งจริง
+ * แค่ return value เงียบ แต่ side effect ของการ start session ไม่เงียบ)
  *
  * @param array<int,array{key:string,href:string,label:string,icon:string,target:string}> $navItems
  */
@@ -151,15 +156,15 @@ function render_app_shell_start(string $pageTitle, string $brandLabel, array $na
   <nav class="sidebar">
     <div class="brand"><?= h($brandLabel) ?></div>
     <nav>
-      <?php foreach ($navItems as $item): ?>
+      <?php foreach ($navItems as $navIdx => $item): ?>
         <a href="<?= h($item['href']) ?>"
            class="<?= $item['key'] === $activeKey ? 'active' : '' ?>"
            <?= ($item['target'] ?? '_self') === '_blank' ? 'target="_blank"' : '' ?>>
-          <span class="ic"><?= $item['icon'] ?></span><?= h($item['label']) ?>
+          <span class="ic ic<?= $navIdx % 6 ?>"><?= $item['icon'] ?></span><?= h($item['label']) ?>
         </a>
       <?php endforeach; ?>
     </nav>
-    <?php if (Auth::check()): ?>
+    <?php if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id'])): ?>
     <div style="margin-top:auto; padding:10px 12px; font-size:12px; color:var(--muted);">
       <?= h(Auth::displayName()) ?><br><a href="logout.php">ออกจากระบบ</a>
     </div>

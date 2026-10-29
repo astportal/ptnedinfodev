@@ -65,6 +65,17 @@ body {
   background: #f1f5f9;
   flex-shrink: 0;
 }
+/* ไอคอนในเมนูซ้ายไล่สีพาสเทล 6 สีวนซ้ำ (ใช้ hex เดียวกับพื้นหลังของ .icon-badge ด้านล่าง ไม่คิดสีใหม่)
+   — แก้เมื่อ 2026-10-29 หลัง code review พบว่าไอคอนเดิมเป็นสีเทาเรียบสีเดียวทั้งเมนู ไม่ตรงกับ mockup
+   ที่อนุมัติไว้ ("ไอคอนพาสเทลหวาน ๆ") — bootstrap.php:render_app_shell_start() วน index ใส่คลาส
+   .ic0-.ic5 ให้ทุก item ตามลำดับ (คนละความหมายกับ .icon-badge.blue/.green/... ที่ใช้ชื่อสีตรง ๆ ที่อื่น
+   ในระบบ เพราะที่นี่วนตามตำแหน่ง ไม่ได้เลือกสีตามความหมายของแต่ละเมนู) */
+.sidebar nav a .ic.ic0 { background: #dbeafe; }
+.sidebar nav a .ic.ic1 { background: #dcfce7; }
+.sidebar nav a .ic.ic2 { background: #fce7f3; }
+.sidebar nav a .ic.ic3 { background: #ede9fe; }
+.sidebar nav a .ic.ic4 { background: #fef3c7; }
+.sidebar nav a .ic.ic5 { background: #cffafe; }
 .sidebar nav a.active { background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
 .sidebar .nav-sep { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 10px 6px; }
 .app-main { flex: 1; min-width: 0; padding: 20px 24px; }
@@ -125,7 +136,7 @@ th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; w
    แรกอยู่แล้ว** เอา position:sticky ออกจึงไม่กระทบพฤติกรรมที่ผู้ใช้เคยเห็นจริง ๆ เลย — ตารางที่ต้องการ
    หัวตาราง sticky แบบเห็นผลจริงให้ใช้ .report-table-scroll แทน (มี max-height+overflow ทั้ง 2 แกนจริง
    ดู .stats-table.two-row-header ใน public_report.css เป็นตัวอย่าง) */
-th { background: #f0fdf4; }
+th { background: var(--primary-light); }
 tbody tr:hover td { background: #fafbfa; }
 .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
 .btn {
@@ -139,7 +150,7 @@ tbody tr:hover td { background: #fafbfa; }
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 4px 10px -4px rgba(22, 163, 74, .5);
+  box-shadow: 0 4px 10px -4px rgba(124, 58, 237, .5);
 }
 .btn:hover { background: var(--primary-dark); }
 .btn-secondary { background: #6b7280; box-shadow: none; }
@@ -262,7 +273,7 @@ label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
   border-radius: 999px;
   font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 8px 20px -6px rgba(22, 163, 74, .55);
+  box-shadow: 0 8px 20px -6px rgba(124, 58, 237, .55);
   transition: transform .15s ease, background-color .15s ease;
 }
 .survey-fab:hover { background: var(--primary-dark); color: #fff; transform: translateY(-2px); }
