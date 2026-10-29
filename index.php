@@ -42,29 +42,18 @@ try {
 } catch (Throwable $e) {
     // migration not applied yet — skip silently, needs_review still works for numeric values
 }
+// เมนูซ้าย (เพิ่มเมื่อ 2026-10-29) — override label ของ item "review" เองที่นี่เพื่อแปะเลขเตือนสด
+// ("(12)" เช่นเดิม) ไม่ทำใน admin_nav_items() เองเพราะผู้ใช้งานยืนยันให้โชว์แค่หน้านี้หน้าเดียว ไม่ใช่
+// ทุกหน้าแอดมิน — ถ้าไปทำใน admin_nav_items() จะรัน query นี้ซ้ำทุกหน้าโดยไม่ได้ขอ
+$navItems = admin_nav_items();
+foreach ($navItems as &$navItem) {
+    if ($navItem['key'] === 'review' && $needsReviewTotal > 0) {
+        $navItem['label'] .= " ({$needsReviewTotal})";
+    }
+}
+unset($navItem);
+render_app_shell_start('แดชบอร์ด', 'ptnedinfo — ระบบรวบรวมข้อมูล', $navItems, 'dashboard');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<title>แดชบอร์ด — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
-  <nav>
-    <a href="review.php">รายการที่ต้องตรวจสอบ<?= $needsReviewTotal > 0 ? " ({$needsReviewTotal})" : '' ?></a>
-    <a href="uploads_history.php">ประวัติการอัปโหลด</a>
-    <a href="schools_master.php">ทำเนียบโรงเรียน</a>
-    <a href="population_upload.php">ข้อมูลประชากรรายอายุ</a>
-    <a href="public_school_search.php" target="_blank">ค้นหารหัสสถานศึกษา</a>
-    <a href="public_report.php" target="_blank">สถิติการศึกษาจังหวัด (สาธารณะ)</a>
-    <a href="settings.php">ตั้งค่า</a>
-    <span class="muted"><?= h(Auth::displayName()) ?></span>
-    &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
-  </nav>
-</div>
 <div class="container">
   <h1>รายการแบบฟอร์ม</h1>
   <p class="muted">เลือกฟอร์มเพื่ออัปโหลดไฟล์ที่ได้รับจากหน่วยงาน หรือดู/ส่งออกข้อมูลที่รวบรวมแล้ว</p>
@@ -164,5 +153,4 @@ try {
     </div>
   </div>
 </div>
-</body>
-</html>
+<?php render_app_shell_end(); ?>

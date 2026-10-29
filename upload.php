@@ -48,28 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+render_app_shell_start('อัปโหลดไฟล์', 'ptnedinfo — ระบบรวบรวมข้อมูล', admin_nav_items(), '');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<title>อัปโหลดไฟล์ — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
-  <nav>
-    <a href="index.php">แดชบอร์ด</a>
-    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
-    <a href="uploads_history.php">ประวัติการอัปโหลด</a>
-    <a href="schools_master.php">ทำเนียบโรงเรียน</a>
-    <a href="public_school_search.php" target="_blank">ค้นหารหัสสถานศึกษา</a>
-    <a href="settings.php">ตั้งค่า</a>
-    <span class="muted"><?= h(Auth::displayName()) ?></span>
-    &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
-  </nav>
-</div>
 <div class="container">
   <div class="card">
     <h1>อัปโหลดไฟล์แบบฟอร์ม</h1>
@@ -148,5 +128,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   <?php endif; ?>
 </div>
-</body>
-</html>
+<?php render_app_shell_end(); ?>
