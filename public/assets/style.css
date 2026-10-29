@@ -1,18 +1,17 @@
 :root {
-  --bg: #f4f7f5;
+  --bg: #fafaff;
   --card: #ffffff;
   --text: #1f2937;
   --muted: #6b7280;
-  --primary: #16a34a;
-  --primary-dark: #15803d;
-  --primary-light: #dcfce7;
-  --navy: #0d2b22;
-  --navy-2: #0a1a20;
+  --primary: #7c3aed;
+  --primary-dark: #6d28d9;
+  --primary-light: #f3e8ff;
   --border: #e5e7eb;
   --ok: #16a34a;
   --err: #dc2626;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 10px 24px -16px rgba(15, 23, 42, .18);
+  --sidebar-w: 230px;
   --topbar-h: 58px; /* ความสูงขั้นต่ำของ topbar (ค่าประมาณ ไม่ fix ตายตัว ยืดได้ถ้า nav ตกบรรทัดบนจอ
                         แคบมาก) — ไม่ได้ใช้อ้างอิง sticky offset ของหัวตารางอีกต่อไป (ลองแล้วใช้ไม่ได้
                         กับ .table-scroll ดู comment ที่ th ด้านล่าง) */
@@ -70,6 +69,86 @@ body {
 .topbar nav a:hover { color: #fff; background: rgba(255, 255, 255, .12); }
 .topbar nav a.active { color: var(--primary-dark); font-weight: 700; background: #fff; }
 .topbar nav .muted { color: rgba(255, 255, 255, .7) !important; }
+
+/* เมนูซ้าย (sidebar) + ปุ่มแฮมเบอร์เกอร์บนมือถือ (เพิ่มเมื่อ 2026-10-29 ตามคำขอผู้ใช้งาน — ย้าย
+   เมนูบนสุดแนวนอน (.topbar ด้านบน) มาเป็นเมนูซ้ายแนวตั้ง + รีสกินเป็นธีม "Candy Pastel" สีสันสดใส
+   แทนธีมเขียวเข้มเดิม) .topbar ด้านบนยังคงไว้ตามเดิมจนกว่าทุกหน้าจะย้ายมาเรียกใช้ sidebar นี้ครบ
+   (ดู bootstrap.php: render_app_shell_start()/render_app_shell_end()) — ชื่อ class ทุกตัวในบล็อกนี้
+   ถูกอ้างอิงตรงจากฟังก์ชันนั้น ห้ามเปลี่ยนชื่อโดยไม่แก้ที่ bootstrap.php ด้วย */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid var(--border);
+  padding: 18px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar .brand { font-weight: 800; font-size: 14px; color: var(--primary-dark); padding: 6px 10px 18px; line-height: 1.4; }
+.sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+.sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+}
+.sidebar nav a:hover { background: #f8f8fb; }
+.sidebar nav a .ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+.sidebar nav a.active { background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
+.sidebar .nav-sep { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 10px 6px; }
+.app-main { flex: 1; min-width: 0; }
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 150;
+}
+.hamburger-btn {
+  width: 32px;
+  height: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.hamburger-btn span { display: block; height: 3px; border-radius: 2px; background: var(--primary); }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, .4); z-index: 199; }
+@media (max-width: 880px) {
+  .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; z-index: 200; }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-topbar { display: flex; }
+  .sidebar-backdrop.open { display: block; }
+}
+
 .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
 .card {
   background: var(--card);
@@ -156,43 +235,43 @@ label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
 .icon-badge.orange { background: #fef3c7; color: #d97706; }
 .icon-badge.cyan   { background: #cffafe; color: #0891b2; }
 
-/* การ์ดเปิดหัวเรื่องแบบเข้มไล่เฉด — ใช้เป็นกล่อง hero ด้านบนหน้ารายงานสาธารณะ +footer ท้ายเว็บ
-   ให้เข้าธีมเดียวกับ .topbar (โทนเข้ม คั่นเนื้อหาขาวไว้ตรงกลาง) */
+/* การ์ดเปิดหัวเรื่อง — ใช้เป็นกล่อง hero ด้านบนหน้ารายงานสาธารณะ +footer ท้ายเว็บ (รีสกินเป็นพาสเทล
+   ม่วง-ชมพูอ่อนเมื่อ 2026-10-29 แทนไล่เฉดเขียวเข้มเดิม ให้เข้าธีม "Candy Pastel" ใหม่) */
 .hero-card {
-  background: linear-gradient(135deg, #0f2a24 0%, #0a1a20 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #f3e8ff 0%, #fce7f3 100%);
+  color: var(--text);
   border: none;
 }
-.hero-card h1, .hero-card p { color: #fff; }
-.hero-card .muted { color: rgba(255, 255, 255, .68); }
+.hero-card h1, .hero-card p { color: var(--text); }
+.hero-card .muted { color: var(--muted); }
 .hero-badge {
   display: inline-block;
-  background: rgba(22, 163, 74, .28);
-  color: #86efac;
-  border: 1px solid rgba(134, 239, 172, .35);
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 10px;
 }
-.hero-card .filter-bar label { color: rgba(255, 255, 255, .8); }
+.hero-card .filter-bar label { color: var(--text); }
 .hero-card .filter-bar select {
-  background: rgba(255, 255, 255, .08);
-  border-color: rgba(255, 255, 255, .25);
-  color: #fff;
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
 }
-.hero-card .filter-bar select option { color: #1f2937; }
 
 .site-footer {
-  background: linear-gradient(135deg, #0f2a24 0%, #0a1a20 100%);
-  color: rgba(255, 255, 255, .75);
+  background: #faf5ff;
+  color: var(--text);
+  border-top: 1px solid var(--border);
   margin-top: 32px;
   padding: 32px 24px 18px;
 }
-.site-footer a { color: rgba(255, 255, 255, .75); text-decoration: none; }
-.site-footer a:hover { color: #fff; text-decoration: underline; }
-.site-footer h3 { color: #fff; font-size: 15px; margin: 0 0 12px; }
+.site-footer a { color: var(--primary-dark); text-decoration: none; }
+.site-footer a:hover { color: var(--primary); text-decoration: underline; }
+.site-footer h3 { color: var(--text); font-size: 15px; margin: 0 0 12px; }
 .site-footer .footer-cols {
   max-width: 1100px;
   margin: 0 auto;
@@ -205,9 +284,9 @@ label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
   max-width: 1100px;
   margin: 24px auto 0;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, .12);
+  border-top: 1px solid var(--border);
   font-size: 13px;
-  color: rgba(255, 255, 255, .55);
+  color: var(--muted);
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
