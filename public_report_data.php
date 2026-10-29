@@ -540,32 +540,14 @@ function render_gender_breakdown_table_and_chart(array $data, string $categoryLa
  */
 function render_report_start(string $activePage): void
 {
-    global $availableYears, $selectedYear, $dimensions, $selectedDimension, $navQuery;
+    global $availableYears, $selectedYear, $dimensions, $selectedDimension;
+    // แม็ป $activePage (ค่าที่ 3 หน้านี้ส่งมา: 'charts'/'table'/'population') ไปเป็น key ของ
+    // public_nav_items() (เปลี่ยนเมื่อ 2026-10-29 ย้ายเมนูจาก .topbar แนวนอนมาเป็น sidebar ซ้าย)
+    $activeKeyMap = ['charts' => 'overview', 'table' => 'table', 'population' => 'population'];
+    $activeKey = $activeKeyMap[$activePage] ?? '';
+    $navItems = public_nav_items(['year' => $selectedYear, 'dim' => $selectedDimension]);
+    render_app_shell_start('สถิติการศึกษาจังหวัดปัตตานี', 'ข้อมูลด้านการศึกษาจังหวัดปัตตานี', $navItems, $activeKey, 'public/assets/public_report.css');
     ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>สถิติการศึกษาจังหวัดปัตตานี — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-<link rel="stylesheet" href="public/assets/public_report.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
-  <nav>
-    <a href="public_report.php?<?= h($navQuery) ?>" class="<?= $activePage === 'charts' ? 'active' : '' ?>">📊 ภาพรวม</a>
-    <a href="public_report_table.php?<?= h($navQuery) ?>" class="<?= $activePage === 'table' ? 'active' : '' ?>">📋 ตารางสรุปยอดรวม</a>
-    <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'grades' ? 'active' : '' ?>">🏫 ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'teacher_grades' ? 'active' : '' ?>">👨‍🏫 ครูผู้สอน</a>
-    <a href="public_population.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'population' ? 'active' : '' ?>">👥 ประชากรวัยเรียน</a>
-    <a href="public_school_search.php?year=<?= h((string)$selectedYear) ?>" class="<?= $activePage === 'search' ? 'active' : '' ?>">🔍 ค้นหารหัสสถานศึกษา</a>
-    <a href="login.php">🔑 เข้าสู่ระบบเจ้าหน้าที่</a>
-  </nav>
-</div>
-<div class="container" style="max-width: 98vw;">
-  <div class="report-main">
     <div class="card hero-card">
       <span class="hero-badge">ข้อมูลเผยแพร่ต่อสาธารณะ</span>
       <h1>สถิติการศึกษาจังหวัดปัตตานี ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
@@ -603,13 +585,11 @@ function render_report_start(string $activePage): void
     <?php
 }
 
-/** ปิด .report-main / .container ที่เปิดไว้ใน render_report_start() + footer */
+/** ปิด .app-main / .app-shell ที่ render_app_shell_start() เปิดไว้ (ผ่าน render_app_shell_end()) + footer */
 function render_report_end(): void
 {
     global $navQuery, $selectedYear;
     ?>
-  </div>
-</div>
 <footer class="site-footer">
   <div class="footer-cols">
     <div>
@@ -639,8 +619,7 @@ function render_report_end(): void
     <span>© <?= h((string)((int)date('Y') + 543)) ?> สำนักงานศึกษาธิการจังหวัดปัตตานี สงวนลิขสิทธิ์</span>
   </div>
 </footer>
-<?php render_survey_fab(); ?>
-</body>
-</html>
-    <?php
+<?php
+    render_survey_fab();
+    render_app_shell_end();
 }

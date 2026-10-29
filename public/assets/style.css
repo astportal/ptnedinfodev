@@ -117,7 +117,7 @@ body {
 }
 .sidebar nav a.active { background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
 .sidebar .nav-sep { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 10px 6px; }
-.app-main { flex: 1; min-width: 0; }
+.app-main { flex: 1; min-width: 0; padding: 20px 24px; }
 .mobile-topbar {
   display: none;
   align-items: center;
