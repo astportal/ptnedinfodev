@@ -93,29 +93,8 @@ $yearRows = $db->query(
      MAX(updated_at) AS last_updated
      FROM population_by_age GROUP BY academic_year ORDER BY academic_year DESC'
 )->fetchAll();
+render_app_shell_start('ข้อมูลประชากรรายอายุ', 'ptnedinfo — ระบบรวบรวมข้อมูล', admin_nav_items(), 'population');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<title>ข้อมูลประชากรรายอายุ — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="index.php">ptnedinfo — ระบบรวบรวมข้อมูล</a>
-  <nav>
-    <a href="review.php">รายการที่ต้องตรวจสอบ</a>
-    <a href="uploads_history.php">ประวัติการอัปโหลด</a>
-    <a href="schools_master.php">ทำเนียบโรงเรียน</a>
-    <a href="population_upload.php">ข้อมูลประชากรรายอายุ</a>
-    <a href="public_school_search.php" target="_blank">ค้นหารหัสสถานศึกษา</a>
-    <a href="public_report.php" target="_blank">สถิติการศึกษาจังหวัด (สาธารณะ)</a>
-    <a href="settings.php">ตั้งค่า</a>
-    <span class="muted"><?= h(Auth::displayName()) ?></span>
-    &nbsp;&nbsp;<a href="logout.php">ออกจากระบบ</a>
-  </nav>
-</div>
 <div class="container">
   <div class="card">
     <h1>ข้อมูลประชากรรายอายุ</h1>
@@ -214,5 +193,4 @@ $yearRows = $db->query(
     <?php endif; ?>
   </div>
 </div>
-</body>
-</html>
+<?php render_app_shell_end(); ?>
