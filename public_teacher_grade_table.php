@@ -6,31 +6,8 @@
  * เดียว แยกชาย/หญิง ตามคำขอผู้ใช้งาน จึงไม่มี 2-row header/colspan แบบตารางผู้เรียนรายชั้นแล้ว)
  */
 require_once __DIR__ . '/public_teacher_grade_table_data.php';
+render_app_shell_start('ตารางครูผู้สอน', 'ข้อมูลด้านการศึกษาจังหวัดปัตตานี', public_nav_items(['year' => $selectedYear]), 'teacher_grades', 'public/assets/public_report.css');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ตารางครูผู้สอน — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-<link rel="stylesheet" href="public/assets/public_report.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
-  <nav>
-    <a href="public_report.php?<?= h($navQuery) ?>">ภาพรวม</a>
-    <a href="public_report_table.php?<?= h($navQuery) ?>">ตารางสรุปยอดรวม</a>
-    <a href="public_school_grade_table.php?<?= h($navQuery) ?>">ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?<?= h($navQuery) ?>" class="active">ครูผู้สอน</a>
-    <a href="public_population.php?<?= h($navQuery) ?>">ประชากรวัยเรียน</a>
-    <a href="public_school_search.php?<?= h($navQuery) ?>">ค้นหารหัสสถานศึกษา</a>
-    <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
-  </nav>
-</div>
-<div class="container" style="max-width: 98vw;">
-  <div class="report-main">
     <div class="card">
       <h1>ตารางครูผู้สอน ประจำปีการศึกษา <?= h((string)$selectedYear) ?></h1>
 
@@ -163,11 +140,9 @@ require_once __DIR__ . '/public_teacher_grade_table_data.php';
         </div>
       <?php endif; ?>
     </div>
-  </div>
-</div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
   <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี</p>
 </footer>
-<?php render_survey_fab(); ?>
-</body>
-</html>
+<?php
+render_survey_fab();
+render_app_shell_end();

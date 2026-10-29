@@ -47,34 +47,8 @@ foreach ($results as $r) {
     $nameCounts[$r['school_name']] = ($nameCounts[$r['school_name']] ?? 0) + 1;
 }
 
-// ต่อ query string เดิม (ปีที่เลือก) เวลาสลับไปหน้ากราฟ/ตารางสรุปอีก 2 หน้าผ่านเมนูด้านซ้าย — คนละ
-// ชุดพารามิเตอร์กับหน้านั้น (ไม่มี dim/q) แต่ page ปลายทางไม่ได้ error ถ้ามีพารามิเตอร์เกินมาแค่เฉย ๆ
-$reportNavQuery = http_build_query(['year' => $selectedYear]);
+render_app_shell_start('ค้นหารหัสสถานศึกษา', 'ข้อมูลด้านการศึกษาจังหวัดปัตตานี', public_nav_items(['year' => $selectedYear]), 'search', 'public/assets/public_report.css');
 ?>
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ค้นหารหัสสถานศึกษา — ptnedinfo</title>
-<link rel="stylesheet" href="public/assets/style.css">
-<link rel="stylesheet" href="public/assets/public_report.css">
-</head>
-<body>
-<div class="topbar">
-  <a href="public_report.php">ข้อมูลด้านการศึกษาจังหวัดปัตตานี</a>
-  <nav>
-    <a href="public_report.php?<?= h($reportNavQuery) ?>">ภาพรวม</a>
-    <a href="public_report_table.php?<?= h($reportNavQuery) ?>">ตารางสรุปยอดรวม</a>
-    <a href="public_school_grade_table.php?year=<?= h((string)$selectedYear) ?>">ผู้เรียนรายชั้น</a>
-    <a href="public_teacher_grade_table.php?year=<?= h((string)$selectedYear) ?>">ครูผู้สอน</a>
-    <a href="public_population.php?year=<?= h((string)$selectedYear) ?>">ประชากรวัยเรียน</a>
-    <a href="public_school_search.php?<?= h($reportNavQuery) ?>" class="active">ค้นหารหัสสถานศึกษา</a>
-    <a href="login.php">เข้าสู่ระบบเจ้าหน้าที่</a>
-  </nav>
-</div>
-<div class="container" style="max-width: 98vw;">
-  <div class="report-main">
     <div class="card">
       <h1>ค้นหารหัสสถานศึกษา</h1>
       <p class="muted">ค้นจากชื่อสถานศึกษา (พิมพ์บางส่วนของชื่อก็ค้นเจอ) — ถ้าเจอชื่อซ้ำกันหลายแห่ง
@@ -143,11 +117,9 @@ $reportNavQuery = http_build_query(['year' => $selectedYear]);
           <?php endif; ?>
         </div>
       <?php endif; ?>
-  </div>
-</div>
 <footer style="text-align:center; padding:20px 16px; margin-top:12px;">
   <p class="muted">สำนักงานศึกษาธิการจังหวัดปัตตานี</p>
 </footer>
-<?php render_survey_fab(); ?>
-</body>
-</html>
+<?php
+render_survey_fab();
+render_app_shell_end();
